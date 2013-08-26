@@ -15,13 +15,13 @@ class NumberTest extends \PHPUnit_Framework_TestCase
     public function testGetAmountPositive()
     {
         $objNumber = new Number(50000);
-        $this->assertEquals(50000, $objNumber->getAmount());
+        $this->assertSame(50000, $objNumber->getAmount());
     }
 
     public function testGetAmountNegative()
     {
         $objNumber = new Number(-50000);
-        $this->assertEquals(-50000, $objNumber->getAmount());
+        $this->assertSame(-50000, $objNumber->getAmount());
     }
 
     public function testAdd()
@@ -31,9 +31,9 @@ class NumberTest extends \PHPUnit_Framework_TestCase
 
         $objNew = $objNumber->add($objNumberToAdd);
 
-        $this->assertEquals(50000, $objNumber->getAmount());
-        $this->assertEquals(120000, $objNumberToAdd->getAmount());
-        $this->assertEquals(170000, $objNew->getAmount());
+        $this->assertSame(50000, $objNumber->getAmount());
+        $this->assertSame(120000, $objNumberToAdd->getAmount());
+        $this->assertSame(170000, $objNew->getAmount());
     }
 
     public function testSubtract()
@@ -43,9 +43,9 @@ class NumberTest extends \PHPUnit_Framework_TestCase
 
         $objNew = $objNumber->subtract($objNumberToSubtract);
 
-        $this->assertEquals(50000, $objNumber->getAmount());
-        $this->assertEquals(30000, $objNumberToSubtract->getAmount());
-        $this->assertEquals(20000, $objNew->getAmount());
+        $this->assertSame(50000, $objNumber->getAmount());
+        $this->assertSame(30000, $objNumberToSubtract->getAmount());
+        $this->assertSame(20000, $objNew->getAmount());
     }
 
     public function testMultiply()
@@ -55,9 +55,9 @@ class NumberTest extends \PHPUnit_Framework_TestCase
 
         $objNew = $objNumber->multiply($objNumberToMultiplyWith);
 
-        $this->assertEquals(50000, $objNumber->getAmount());
-        $this->assertEquals(30000, $objNumberToMultiplyWith->getAmount());
-        $this->assertEquals(150000, $objNew->getAmount());
+        $this->assertSame(50000, $objNumber->getAmount());
+        $this->assertSame(30000, $objNumberToMultiplyWith->getAmount());
+        $this->assertSame(150000, $objNew->getAmount());
     }
 
     public function testDivide()
@@ -67,29 +67,29 @@ class NumberTest extends \PHPUnit_Framework_TestCase
 
         $objNew = $objNumber->divide($objNumberToDivideBy);
 
-        $this->assertEquals(270000, $objNumber->getAmount());
-        $this->assertEquals(130000, $objNumberToDivideBy->getAmount());
-        $this->assertEquals(20769, $objNew->getAmount());
+        $this->assertSame(270000, $objNumber->getAmount());
+        $this->assertSame(130000, $objNumberToDivideBy->getAmount());
+        $this->assertSame(20769, $objNew->getAmount());
     }
 
     public function testToString()
     {
         $objNumber = new Number(20769);
-        $this->assertEquals('2.0769', (string) $objNumber);
-        $this->assertEquals(2.0769, (float) $objNumber->getAsFloat());
+        $this->assertSame('2.0769', (string) $objNumber);
+        $this->assertSame(2.0769, $objNumber->getAsFloat());
     }
 
     public function testCreate()
     {
-        $this->assertEquals(130000, Number::create('13')->getAmount());
-        $this->assertEquals(130100, Number::create('13.01')->getAmount());
-        $this->assertEquals(130991, Number::create('13.0991')->getAmount());
-        $this->assertEquals(130991, Number::create('13,0991576')->getAmount());
-        $this->assertEquals(130999, Number::create('13.0999976')->getAmount());
-        $this->assertEquals(1309999760, Number::create('13.0999.976')->getAmount());
-        $this->assertEquals(1309999760, Number::create('13\'0999.976')->getAmount());
-        $this->assertEquals(1309999760, Number::create(130999.976)->getAmount());
-        $this->assertEquals(1309999799, Number::create(130999.97999999)->getAmount());
+        $this->assertSame(130000, Number::create('13')->getAmount());
+        $this->assertSame(130100, Number::create('13.01')->getAmount());
+        $this->assertSame(130991, Number::create('13.0991')->getAmount());
+        $this->assertSame(130991, Number::create('13,0991576')->getAmount());
+        $this->assertSame(130999, Number::create('13.0999976')->getAmount());
+        $this->assertSame(1309999760, Number::create('13.0999.976')->getAmount());
+        $this->assertSame(1309999760, Number::create('13\'0999.976')->getAmount());
+        $this->assertSame(1309999760, Number::create(130999.976)->getAmount());
+        $this->assertSame(1309999799, Number::create(130999.97999999)->getAmount());
     }
 
     /**
