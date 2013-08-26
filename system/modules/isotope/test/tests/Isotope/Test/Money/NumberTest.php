@@ -72,6 +72,18 @@ class NumberTest extends \PHPUnit_Framework_TestCase
         $this->assertSame(20769, $objNew->getAmount());
     }
 
+    public function testNegativeDivide()
+    {
+        $objNumber = new Number(130000);
+        $objNumberToDivideBy = new Number(-270000);
+
+        $objNew = $objNumber->divide($objNumberToDivideBy);
+
+        $this->assertSame(130000, $objNumber->getAmount());
+        $this->assertSame(-270000, $objNumberToDivideBy->getAmount());
+        $this->assertSame(-4814, $objNew->getAmount());
+    }
+
     public function testToString()
     {
         $objNumber = new Number(20769);

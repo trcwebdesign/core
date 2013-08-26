@@ -70,9 +70,9 @@ class Number
      * @param   Number
      * @return  Number
      */
-    public function multiply($objToMultiplyWith)
+    public function multiply(Number $objToMultiplyWith)
     {
-        return new self((int) round($this->getAmount() * $objToMultiplyWith->getAmount() / 10000, 0, $intRoundingMode));
+        return new self((int) $this->getAmount() * $objToMultiplyWith->getAmount() / 10000);
     }
 
 
@@ -81,10 +81,9 @@ class Number
      * @param   Number
      * @return  Number
      */
-    public function divide($objToDivideBy)
+    public function divide(Number $objToDivideBy)
     {
-
-        return new self((int) floor($this->getAmount() / $objToDivideBy->getAmount() * 10000));
+        return new self((int) (($this->getAmount() * 10000) / $objToDivideBy->getAmount()));
     }
 
     /**
