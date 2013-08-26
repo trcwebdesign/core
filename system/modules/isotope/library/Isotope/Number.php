@@ -150,7 +150,33 @@ class Number
      */
     public function getAsFloat()
     {
-        return (float) $this->__toString();
+        return (float) $this->getAsString();
+    }
+
+    /**
+     * Get the string value
+     * @return string
+     */
+    public function getAsString()
+    {
+        $strFirst = (string) substr($this->getAmount(), 0, -4);
+
+        if ($strFirst === '' || $strFirst === '-') {
+            $strFirst = '0';
+        }
+
+        if ($this->isNegative()) {
+            $strFirst = '-' . $strFirst;
+        }
+
+        $strSecond = str_pad(substr(($this->getAmount() * ($this->isNegative() ? -1 : 1)), -4), 4, '0', STR_PAD_LEFT);
+        $strSecond = rtrim($strSecond, '0');
+
+        if ($strSecond === '') {
+            return (string) $strFirst;
+        }
+
+        return (string)  $strFirst . '.' . $strSecond;
     }
 
     /**
@@ -159,7 +185,7 @@ class Number
      */
     public function __toString()
     {
-        return (string) substr($this->getAmount(), 0, -4) . '.' . substr($this->getAmount(), -4);
+        return $this->getAsString();
     }
 
     /**

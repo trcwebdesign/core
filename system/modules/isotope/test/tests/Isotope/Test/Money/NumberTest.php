@@ -89,7 +89,33 @@ class NumberTest extends \PHPUnit_Framework_TestCase
         $objNumber = new Number(20769);
         $this->assertSame('2.0769', (string) $objNumber);
         $this->assertSame(2.0769, $objNumber->getAsFloat());
+
+        $objNegative = new Number(-4814);
+        $this->assertSame('-0.4814', $objNegative->getAsString());
     }
+
+    public function testSmallNumber()
+    {
+        $objNumber = new Number(15);
+        $this->assertSame('0.0015', $objNumber->getAsString());
+        $this->assertSame(0.0015, $objNumber->getAsFloat());
+
+        $objNumber = new Number(-15);
+        $this->assertSame('-0.0015', $objNumber->getAsString());
+        $this->assertSame(-0.0015, $objNumber->getAsFloat());
+    }
+
+    public function testZeroValues()
+    {
+        $objNumber = new Number(0);
+        $this->assertSame('0', $objNumber->getAsString());
+        $this->assertSame((float) 0, $objNumber->getAsFloat());
+
+        $objNumber = new Number(-0);
+        $this->assertSame('0', $objNumber->getAsString());
+        $this->assertSame((float) 0, $objNumber->getAsFloat());
+    }
+
 
     public function testCreate()
     {
