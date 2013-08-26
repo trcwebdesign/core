@@ -195,6 +195,7 @@ $GLOBALS['BE_FFL']['inheritCheckbox']        = 'Isotope\Widget\InheritCheckBox';
 $GLOBALS['BE_FFL']['fieldWizard']            = 'Isotope\Widget\FieldWizard';
 $GLOBALS['BE_FFL']['productTree']            = 'Isotope\Widget\ProductTree';
 $GLOBALS['BE_FFL']['productGroupSelector']   = 'Isotope\Widget\ProductGroupSelector';
+$GLOBALS['BE_FFL']['numberField']            = 'Isotope\Widget\NumberField';
 
 /**
  * Payment methods
