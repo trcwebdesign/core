@@ -36,12 +36,27 @@ class Zoom extends Inline
      * @param integer
      * @param boolean
      */
-    public function generateGallery($strType='gallery', $intSkip=0, $blnForce=false)
+    public function generateGallery($intSkip=0, $blnForce=false)
     {
         // Include scripts and styles
-        $GLOBALS['TL_JAVASCRIPT'][] = 'system/modules/isotope/assets/zoomgallery.min.js';
-        $GLOBALS['TL_CSS'][] = 'system/modules/isotope/assets/zoomgallery.min.css';
+        $GLOBALS['TL_JAVASCRIPT'][] = 'system/modules/isotope/assets/zoomgallery' . (ISO_DEBUG ? '' : '.min') . '.js';
+        $GLOBALS['TL_CSS'][] = 'system/modules/isotope/assets/zoomgallery' . (ISO_DEBUG ? '' : '.min') . '.css';
 
-        return parent::generateGallery($strType, $intSkip, $blnForce);
+        return parent::generateGallery($intSkip, $blnForce);
+    }
+
+
+    /**
+     * Add large image size to template
+     * @param   object
+     * @param   string
+     * @param   array
+     * @return  string
+     */
+    protected function addImageToTemplate(\Isotope\Template $objTemplate, $strType, array $arrFile)
+    {
+        parent::addImageToTemplate($objTemplate, $strType, $arrFile);
+
+        $objTemplate->large = $arrFile['lightbox'];
     }
 }
