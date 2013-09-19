@@ -361,6 +361,7 @@ $GLOBALS['TL_CRON']['daily'][] = array('Isotope\Automator', 'convertCurrencies')
 
 /**
  * Auto_item keywords
+ * @todo these must be loaded from urlMatrix
  */
 $GLOBALS['TL_AUTO_ITEM'][] = 'product';
 $GLOBALS['TL_AUTO_ITEM'][] = 'step';
