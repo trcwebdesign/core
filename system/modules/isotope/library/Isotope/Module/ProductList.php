@@ -197,17 +197,17 @@ class ProductList extends Module
         }
 
         $arrBuffer = array();
-        $intReaderPage = \Isotope\Frontend::getReaderPageId(null, $this->iso_reader_jumpTo);
+
         $arrDefaultOptions = $this->getDefaultProductOptions();
 
         foreach ($arrProducts as $objProduct) {
             $arrConfig = array(
                 'module'        => $this,
                 'template'      => ($this->iso_list_layout ?: $objProduct->getRelated('type')->list_template),
-                'gallery'       => $objProduct->getRelated('type')->list_gallery,
+                'gallery'       => ($this->iso_gallery ?: $objProduct->getRelated('type')->list_gallery),
                 'buttons'       => deserialize($this->iso_buttons, true),
                 'useQuantity'   => $this->iso_use_quantity,
-                'jumpTo'        => $intReaderPage
+                'jumpTo'        => $this->findJumpToPage($objProduct),
             );
 
             if (\Environment::get('isAjaxRequest') && \Input::get('AJAX_MODULE') == $this->id && \Input::get('AJAX_PRODUCT') == $objProduct->id) {
@@ -216,8 +216,9 @@ class ProductList extends Module
 
             $objProduct->setOptions(array_merge($arrDefaultOptions, $objProduct->getOptions()));
 
+            // Must be done after setting options to generate the variant config into the URL
             if ($this->iso_jump_first && \Isotope\Frontend::getAutoItem('product') == '') {
-                \Controller::redirect($objProduct->generateUrl($intReaderPage));
+                \Controller::redirect($objProduct->generateUrl($arrConfig['jumpTo']));
             }
 
             $arrBuffer[] = array(
@@ -249,7 +250,7 @@ class ProductList extends Module
     protected function findProducts($arrCacheIds=null)
     {
         $arrColumns = array();
-        $arrCategories = $this->findCategories($this->iso_category_scope);
+        $arrCategories = $this->findCategories();
 
         list($arrFilters, $arrSorting, $strWhere, $arrValues) = $this->getFiltersAndSorting();
 

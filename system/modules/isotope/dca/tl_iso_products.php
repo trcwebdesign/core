@@ -15,6 +15,7 @@
  * @author     Kamil Kuzminski <kamil.kuzminski@codefog.pl>
  */
 
+\System::loadLanguageFile('tl_iso_producttypes');
 
 /**
  * Table tl_iso_products
@@ -28,7 +29,6 @@ $GLOBALS['TL_DCA']['tl_iso_products'] = array
         'label'                     => &$GLOBALS['TL_LANG']['MOD']['iso_products'][0],
         'dataContainer'             => 'ProductData',
         'enableVersioning'          => true,
-        'closed'                    => true,
         'switchToEdit'              => true,
         'gtable'                    => 'tl_iso_groups',
         'ctable'                    => array('tl_iso_downloads', 'tl_iso_product_categories', 'tl_iso_prices'),
@@ -37,9 +37,12 @@ $GLOBALS['TL_DCA']['tl_iso_products'] = array
             array('Isotope\ProductCallbacks', 'applyAdvancedFilters'),
             array('Isotope\ProductCallbacks', 'checkPermission'),
             array('Isotope\ProductCallbacks', 'buildPaletteString'),
-            array('Isotope\ProductCallbacks', 'loadDefaultProductType'),
             array('Isotope\ProductCallbacks', 'addMoveAllFeature'),
             array('Isotope\ProductCallbacks', 'changeVariantColumns'),
+        ),
+        'oncreate_callback' => array
+        (
+            array('Isotope\ProductCallbacks', 'storeInitialValues'),
         ),
         'oncopy_callback' => array
         (
@@ -48,7 +51,6 @@ $GLOBALS['TL_DCA']['tl_iso_products'] = array
         'onsubmit_callback' => array
         (
             array('Isotope\Backend', 'truncateProductCache'),
-            array('Isotope\ProductCallbacks', 'storeDateAdded')
         ),
         'onversion_callback' => array
         (
@@ -79,15 +81,15 @@ $GLOBALS['TL_DCA']['tl_iso_products'] = array
             'mode'                  => 2,
             'fields'                => array('name'),
             'headerFields'          => array('name', 'sku', 'price', 'published'),
-            'headerOperations'      => array('edit', 'copy', 'cut', 'delete', 'toggle', 'show', 'generate', 'related', 'downloads', 'prices'),
+            'headerOperations'      => array('edit', 'copy', 'cut', 'delete', 'toggle', 'show', 'related', 'downloads'),
             'flag'                  => 1,
             'panelLayout'           => 'iso_buttons,iso_filter;filter;sort,search,limit',
             'icon'                  => 'system/modules/isotope/assets/store-open.png',
             'paste_button_callback' => array('Isotope\PasteProductButton', 'generate'),
             'panel_callback'        => array
             (
-            	'iso_buttons' => array('Isotope\ProductCallbacks', 'generateFilterButtons'),
-            	'iso_filter'  => array('Isotope\ProductCallbacks', 'generateAdvancedFilters')
+                'iso_buttons' => array('Isotope\ProductCallbacks', 'generateFilterButtons'),
+                'iso_filter'  => array('Isotope\ProductCallbacks', 'generateAdvancedFilters')
             )
         ),
         'label' => array
@@ -98,16 +100,15 @@ $GLOBALS['TL_DCA']['tl_iso_products'] = array
         ),
         'global_operations' => array
         (
-            'new_product' => array
+            'generate' => array
             (
-                'label'             => &$GLOBALS['TL_LANG']['tl_iso_products']['new_product'],
-                'href'              => 'act=create&type=product',
+                'label'             => &$GLOBALS['TL_LANG']['tl_iso_products']['generate'],
+                'href'              => 'key=generate',
                 'icon'              => 'new.gif',
-                'attributes'        => 'onclick="Backend.getScrollOffset();"',
             ),
             'groups' => array
             (
-                'label'             => &$GLOBALS['TL_LANG']['tl_iso_products']['groups'],
+                'label'             => &$GLOBALS['TL_LANG']['tl_iso_products']['product_groups'],
                 'href'              => 'table=tl_iso_groups',
                 'icon'              => 'system/modules/isotope/assets/folders.png',
                 'attributes'        => 'onclick="Backend.getScrollOffset();"',
@@ -178,13 +179,6 @@ $GLOBALS['TL_DCA']['tl_iso_products'] = array
                 'icon'              => 'system/modules/isotope/assets/table--pencil.png',
                 'button_callback'   => array('Isotope\ProductCallbacks', 'variantsButton'),
             ),
-            'generate' => array
-            (
-                'label'             => &$GLOBALS['TL_LANG']['tl_iso_products']['generate'],
-                'href'              => 'key=generate',
-                'icon'              => 'system/modules/isotope/assets/table-insert-row.png',
-                'button_callback'   => array('Isotope\ProductCallbacks', 'variantsButton'),
-            ),
             'related' => array
             (
                 'label'             => &$GLOBALS['TL_LANG']['tl_iso_products']['related'],
@@ -198,13 +192,6 @@ $GLOBALS['TL_DCA']['tl_iso_products'] = array
                 'href'              => 'table=tl_iso_downloads',
                 'icon'              => 'system/modules/isotope/assets/paper-clip.png',
                 'button_callback'   => array('Isotope\ProductCallbacks', 'downloadsButton'),
-            ),
-            'prices' => array
-            (
-                'label'             => &$GLOBALS['TL_LANG']['tl_iso_products']['prices'],
-                'href'              => 'table=tl_iso_prices',
-                'icon'              => 'system/modules/isotope/assets/price-tag.png',
-                'button_callback'   => array('Isotope\ProductCallbacks', 'pricesButton'),
             ),
         ),
     ),
@@ -240,6 +227,7 @@ $GLOBALS['TL_DCA']['tl_iso_products'] = array
         'gid' => array
         (
             'foreignKey'            => 'tl_iso_groups.name',
+            'eval'                  => array('doNotShow'=>true),
             'attributes'            => array('systemColumn'=>true),
             'sql'                   => "int(10) unsigned NOT NULL default '0'",
             'relation'              => array('type'=>'hasOne', 'load'=>'lazy'),
@@ -251,6 +239,7 @@ $GLOBALS['TL_DCA']['tl_iso_products'] = array
         ),
         'language' => array
         (
+            'eval'                  => array('doNotShow'=>true),
             'attributes'            => array('systemColumn'=>true),
             'sql'                   => "varchar(5) NOT NULL default ''",
         ),
@@ -280,7 +269,7 @@ $GLOBALS['TL_DCA']['tl_iso_products'] = array
             'exclude'               => true,
             'inputType'             => 'pageTree',
             'foreignKey'            => 'tl_page.title',
-            'eval'                  => array('doNotSaveEmpty'=>true, 'multiple'=>true, 'fieldType'=>'checkbox', 'tl_class'=>'clr'),
+            'eval'                  => array('doNotSaveEmpty'=>true, 'multiple'=>true, 'fieldType'=>'checkbox', 'orderField'=>'orderPages', 'tl_class'=>'clr hide_sort_hint'),
             'relation'              => array('type'=>'hasMany', 'load'=>'lazy'),
             'attributes'            => array('legend'=>'general_legend', 'fixed'=>true, 'inherit'=>true, 'systemColumn'=>true),
             'load_callback'         => array
@@ -291,6 +280,11 @@ $GLOBALS['TL_DCA']['tl_iso_products'] = array
             (
                 array('Isotope\ProductCallbacks', 'saveProductCategories'),
             ),
+        ),
+        'orderPages' => array
+        (
+            'eval'                  => array('doNotShow'=>true),
+            'sql'                   => "text NULL"
         ),
         'inherit' => array
         (
@@ -401,7 +395,12 @@ $GLOBALS['TL_DCA']['tl_iso_products'] = array
             'inputType'             => 'dcaWizard',
             'foreignTable'          => 'tl_iso_prices',
             'attributes'            => array('systemColumn'=>true),
-            'eval'                  => array('tl_class'=>'clr'),
+            'eval'                  => array
+            (
+                'listCallback'      => array('Isotope\tl_iso_prices', 'generateWizardList'),
+                'applyButtonLabel'  => &$GLOBALS['TL_LANG']['tl_iso_products']['prices']['apply_and_close'],
+                'tl_class'          =>'clr'
+            ),
         ),
         'price_tiers' => array
         (
@@ -538,6 +537,10 @@ $GLOBALS['TL_DCA']['tl_iso_products'] = array
             'attributes'            => array('legend'=>'publish_legend', 'fixed'=>true, 'variant_fixed'=>true, 'systemColumn'=>true),
             'sql'                   => "varchar(10) NOT NULL default ''",
         ),
+        'variantFields' => array
+        (
+            'label'                 => &$GLOBALS['TL_LANG']['tl_iso_producttypes']['variant_attributes'],
+        ),
         'source' => array
         (
             'label'                 => &$GLOBALS['TL_LANG']['tl_iso_products']['source'],
@@ -550,8 +553,11 @@ $GLOBALS['TL_DCA']['tl_iso_products'] = array
 /**
  * Adjust the data configuration array in variants view
  */
-if (\Input::get('id'))
-{
-	$GLOBALS['TL_DCA']['tl_iso_products']['list']['global_operations']['new_product']['label'] = &$GLOBALS['TL_LANG']['tl_iso_products']['new_variant'];
-	$GLOBALS['TL_DCA']['tl_iso_products']['list']['global_operations']['new_product']['href'] = 'act=create&mode=2&type=variant&pid=' . \Input::get('id') . '&gid=' . $this->Session->get('iso_products_gid');
+if (\Input::get('id')) {
+    $GLOBALS['TL_LANG']['tl_iso_products']['new'] = $GLOBALS['TL_LANG']['tl_iso_products']['new_variant'];
+    $GLOBALS['TL_DCA']['tl_iso_products']['config']['switchToEdit'] = false;
+    unset($GLOBALS['TL_DCA']['tl_iso_products']['list']['global_operations']['import']);
+    unset($GLOBALS['TL_DCA']['tl_iso_products']['list']['global_operations']['groups']);
+} else {
+    unset($GLOBALS['TL_DCA']['tl_iso_products']['list']['global_operations']['generate']);
 }

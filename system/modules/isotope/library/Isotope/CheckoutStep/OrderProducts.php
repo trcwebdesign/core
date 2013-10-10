@@ -14,6 +14,7 @@ namespace Isotope\CheckoutStep;
 
 use Isotope\Isotope;
 use Isotope\Interfaces\IsotopeCheckoutStep;
+use Isotope\Interfaces\IsotopeProductCollection;
 
 
 class OrderProducts extends CheckoutStep implements IsotopeCheckoutStep
@@ -36,7 +37,13 @@ class OrderProducts extends CheckoutStep implements IsotopeCheckoutStep
     {
         $objTemplate = new \Isotope\Template($this->objModule->iso_collectionTpl);
 
-        Isotope::getCart()->addToTemplate($objTemplate, $this->objModule->getProductCollectionItemsSortingCallable());
+        Isotope::getCart()->addToTemplate(
+            $objTemplate,
+            array(
+                'gallery'   => $this->objModule->iso_gallery,
+                'sorting'   => $this->objModule->getProductCollectionItemsSortingCallable(),
+            )
+        );
 
         return $objTemplate->parse();
     }
@@ -48,5 +55,36 @@ class OrderProducts extends CheckoutStep implements IsotopeCheckoutStep
     public function review()
     {
         return '';
+    }
+
+    /**
+     * Return array of tokens for email templates
+     * @param   IsotopeProductCollection
+     * @return  array
+     */
+    public function getEmailTokens(IsotopeProductCollection $objCollection)
+    {
+        $objTemplate = new \Isotope\Template($this->objModule->iso_collectionTpl);
+
+        Isotope::getCart()->addToTemplate(
+            $objTemplate,
+            array(
+                'gallery'   => $this->objModule->iso_gallery,
+                'sorting'   => $this->objModule->getProductCollectionItemsSortingCallable(),
+            )
+        );
+
+        $strHtml = $objTemplate->parse();
+        $objTemplate->textOnly = true;
+        $strText = $objTemplate->parse();
+
+        return array(
+            'items'         => $objCollection->sumItemsQuantity(),
+            'products'      => $objCollection->countItems(),
+            'subTotal'      => Isotope::formatPriceWithCurrency($objCollection->getSubtotal(), false),
+            'grandTotal'    => Isotope::formatPriceWithCurrency($objCollection->getTotal(), false),
+            'cart_text'     => strip_tags(Isotope::getInstance()->call('replaceInsertTags', $strText)),
+            'cart_html'     => Isotope::getInstance()->call('replaceInsertTags', $strHtml),
+        );
     }
 }

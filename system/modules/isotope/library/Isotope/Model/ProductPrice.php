@@ -97,7 +97,7 @@ class ProductPrice extends \Model implements IsotopePrice
         $fltAmount = $this->getValueForTier($intQuantity);
 
         if (($objTaxClass = $this->getRelated('tax_class')) !== null) {
-            $objTaxClass->calculateNetPrice($fltAmount);
+            $fltAmount = $objTaxClass->calculateNetPrice($fltAmount);
         }
 
         // @todo should pass product object as second parameter
@@ -114,7 +114,7 @@ class ProductPrice extends \Model implements IsotopePrice
         $fltAmount = $this->getValueForTier($intQuantity);
 
         if (($objTaxClass = $this->getRelated('tax_class')) !== null) {
-            $objTaxClass->calculateGrossPrice($fltAmount);
+            $fltAmount = $objTaxClass->calculateGrossPrice($fltAmount);
         }
 
         // @todo should pass product object as second parameter
@@ -333,6 +333,31 @@ class ProductPrice extends \Model implements IsotopePrice
         }
 
         return $objLowest;
+    }
+
+    /**
+     * Find primary price for a product
+     * @param   int
+     * @return  ProductPrice|null
+     */
+    public static function findPrimaryByProduct($intProduct, array $arrOptions=array())
+    {
+        $arrOptions = array_merge(
+            array(
+                'column' => array(
+                    "pid=" . $intProduct,
+                    "config_id=0",
+                    "member_group=0",
+                    "start=''",
+                    "stop=''"
+                ),
+    			'limit'  => 1,
+    			'return' => 'Model'
+    		),
+            $arrOptions
+        );
+
+        return static::find($arrOptions);
     }
 
     /**

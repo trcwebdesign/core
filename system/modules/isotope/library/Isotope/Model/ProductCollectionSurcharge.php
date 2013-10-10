@@ -15,6 +15,8 @@ namespace Isotope\Model;
 use Isotope\Isotope;
 use Isotope\Interfaces\IsotopeProductCollection;
 use Isotope\Interfaces\IsotopeProductCollectionSurcharge;
+use Isotope\Interfaces\IsotopePayment;
+use Isotope\Interfaces\IsotopeShipping;
 use Isotope\Model\ProductCollectionSurcharge\Tax;
 
 /**
@@ -94,6 +96,24 @@ abstract class ProductCollectionSurcharge extends TypeAgent
             unset($this->arrProducts[$objItem->id]);
         }
     }
+
+    /**
+     * Update IDs of tax per product config
+     * @param   array
+     */
+    public function convertCollectionItemIds($arrIdMap)
+    {
+        $arrProducts = array();
+
+        foreach ($this->arrProducts as $k => $v) {
+            if (isset($arrIdMap[$k])) {
+                $arrProducts[$arrIdMap[$k]] = $v;
+            }
+        }
+
+        $this->arrProducts = $arrProducts;
+    }
+
 
     /**
      * Split tax amount amongst collection products
@@ -257,7 +277,7 @@ abstract class ProductCollectionSurcharge extends TypeAgent
                         $arrTaxes[$objTaxClass->id . '_' . $objIncludes->id]->label         = $objTaxClass->getLabel() ?: $objIncludes->getLabel();
                         $arrTaxes[$objTaxClass->id . '_' . $objIncludes->id]->price         = $objIncludes->getAmount() . ($objIncludes->isPercentage() ? '%' : '');
                         $arrTaxes[$objTaxClass->id . '_' . $objIncludes->id]->total_price   = Isotope::getInstance()->roundPrice($fltTax, $objTaxClass->applyRoundingIncrement);
-                        $arrTaxes[$objTaxClass->id . '_' . $objIncludes->id]->add           = false;
+                        $arrTaxes[$objTaxClass->id . '_' . $objIncludes->id]->addToTotal    = false;
                     }
                     else
                     {
@@ -293,7 +313,7 @@ abstract class ProductCollectionSurcharge extends TypeAgent
                             $arrTaxes[$objTaxRate->id]->label          = $objTaxRate->getLabel();
                             $arrTaxes[$objTaxRate->id]->price          = $objTaxRate->getAmount() . ($objTaxRate->isPercentage() ? '%' : '');
                             $arrTaxes[$objTaxRate->id]->total_price    = Isotope::getInstance()->roundPrice($fltTax, $objTaxClass->applyRoundingIncrement);
-                            $arrTaxes[$objTaxRate->id]->add            = true;
+                            $arrTaxes[$objTaxRate->id]->addToTotal     = true;
                         }
                         else
                         {
@@ -359,7 +379,7 @@ abstract class ProductCollectionSurcharge extends TypeAgent
                         $arrTaxes[$objTaxClass->id . '_' . $objIncludes->id]->label         = $objTaxClass->getLabel() ?: $objIncludes->getLabel();
                         $arrTaxes[$objTaxClass->id . '_' . $objIncludes->id]->price         = $objIncludes->getAmount() . ($objIncludes->isPercentage() ? '%' : '');
                         $arrTaxes[$objTaxClass->id . '_' . $objIncludes->id]->total_price   = Isotope::getInstance()->roundPrice($fltTax, $objTaxClass->applyRoundingIncrement);
-                        $arrTaxes[$objTaxClass->id . '_' . $objIncludes->id]->add           = false;
+                        $arrTaxes[$objTaxClass->id . '_' . $objIncludes->id]->addToTotal    = false;
                     }
                     else
                     {
@@ -400,7 +420,7 @@ abstract class ProductCollectionSurcharge extends TypeAgent
                             $arrTaxes[$objTaxRate->id]->label          = $objTaxRate->getLabel();
                             $arrTaxes[$objTaxRate->id]->price          = $objTaxRate->getAmount() . ($objTaxRate->isPercentage() ? '%' : '');
                             $arrTaxes[$objTaxRate->id]->total_price    = Isotope::getInstance()->roundPrice($fltTax, $objTaxClass->applyRoundingIncrement);
-                            $arrTaxes[$objTaxRate->id]->add            = true;
+                            $arrTaxes[$objTaxRate->id]->addToTotal     = true;
                         }
                         else
                         {
@@ -449,7 +469,7 @@ abstract class ProductCollectionSurcharge extends TypeAgent
     }
 
 
-    protected static function buildForCollection($strClass, $strLabel, $objSource, IsotopeProductCollection $objCollection)
+    protected static function buildSurcharge($strClass, $strLabel, $objSource, IsotopeProductCollection $objCollection)
     {
         $intTaxClass = $objSource->tax_class;
 

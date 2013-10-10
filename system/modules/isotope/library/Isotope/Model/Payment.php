@@ -143,12 +143,10 @@ abstract class Payment extends TypeAgent
 
         if (is_array($arrTypes) && !empty($arrTypes))
         {
-            $arrProducts = Isotope::getCart()->getProducts();
+            $arrItems = Isotope::getCart()->getItems();
 
-            foreach ($arrProducts as $objProduct)
-            {
-                if (!in_array($objProduct->type, $arrTypes))
-                {
+            foreach ($arrItems as $objItem) {
+                if (!$objItem->hasProduct() || !in_array($objItem->getProduct()->type, $arrTypes)) {
                     return false;
                 }
             }
@@ -210,22 +208,6 @@ abstract class Payment extends TypeAgent
     public function getLabel()
     {
         return Translation::get($this->label ?: $this->name);
-    }
-
-
-    /**
-     * Return a html form for payment data or an empty string.
-     *
-     * The input fields should be from array "payment" including the payment module ID.
-     * Example: <input type="text" name="payment[$this->id][cc_num]" />
-     * You can set $objCheckoutModule->doNotSubmit = true if post is sent but data is invalid.
-     *
-     * @param object The checkout module object.
-     * @return string
-     */
-    public function paymentForm($objCheckoutModule)
-    {
-        return '';
     }
 
 
@@ -364,31 +346,4 @@ abstract class Payment extends TypeAgent
     {
         return array();
     }
-
-
-    /**
-     * Override parent addToUrl function. Use generateFrontendUrl if we want to remove all parameters.
-     * @param string
-     * @param boolean
-     * @return string
-     */
-/*
-    protected function addToUrl($strRequest, $blnIgnoreParams=false)
-    {
-        if ($blnIgnoreParams)
-        {
-            global $objPage;
-
-            // Support for auto_item parameter
-            if ($GLOBALS['TL_CONFIG']['useAutoItem'])
-            {
-                $strRequest = str_replace('step=', '', $strRequest);
-            }
-
-            return \Controller::generateFrontendUrl($objPage->row(), '/' . str_replace(array('=', '&amp;', '&'), '/', $strRequest));
-        }
-
-        return parent::addToUrl($strRequest, $blnIgnoreParams);
-    }
-*/
 }

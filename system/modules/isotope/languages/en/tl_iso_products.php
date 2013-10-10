@@ -59,7 +59,7 @@ $GLOBALS['TL_LANG']['tl_iso_products']['showVariants']              = 'Show prod
 /**
  * Buttons
  */
-$GLOBALS['TL_LANG']['tl_iso_products']['new_product']               = array('New product', 'Create new product');
+$GLOBALS['TL_LANG']['tl_iso_products']['new']                       = array('New product', 'Create new product');
 $GLOBALS['TL_LANG']['tl_iso_products']['new_variant']               = array('Add variant', 'Add new variant to a given product');
 $GLOBALS['TL_LANG']['tl_iso_products']['edit']                      = array('Edit product', 'Edit product ID %s');
 $GLOBALS['TL_LANG']['tl_iso_products']['copy']                      = array('Copy product', 'Copy product ID %s');
@@ -74,9 +74,10 @@ $GLOBALS['TL_LANG']['tl_iso_products']['filter_new']                = 'New produ
 $GLOBALS['TL_LANG']['tl_iso_products']['filter_new_today']          = 'Added today';
 $GLOBALS['TL_LANG']['tl_iso_products']['filter_new_week']           = 'Added this week';
 $GLOBALS['TL_LANG']['tl_iso_products']['filter_new_month']          = 'Added this month';
-$GLOBALS['TL_LANG']['tl_iso_products']['groups']                    = array('Product groups', 'Manage product groups');
+$GLOBALS['TL_LANG']['tl_iso_products']['product_groups']            = array('Product groups', 'Manage product groups');
 $GLOBALS['TL_LANG']['tl_iso_products']['import']                    = array('Import assets', 'Import images and other media from a folder');
-$GLOBALS['TL_LANG']['tl_iso_products']['prices']                    = array('Manage prices', 'Manage prices for product ID %s');
+$GLOBALS['TL_LANG']['tl_iso_products']['prices']                    = array('Manage prices', 'Click the button to manage advanced prices for this product.');
+$GLOBALS['TL_LANG']['tl_iso_products']['prices']['apply_and_close'] = 'Apply and close';
 $GLOBALS['TL_LANG']['tl_iso_products']['variants']                  = array('Product variants', 'Show variants for product ID %s');
 $GLOBALS['TL_LANG']['tl_iso_products']['generate']                  = array('Generate variants', 'Generate variants for product ID %s');
 $GLOBALS['TL_LANG']['tl_iso_products']['related']                   = array('Related products', 'Manage related products for product ID %s');

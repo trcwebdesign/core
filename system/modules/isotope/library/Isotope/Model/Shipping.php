@@ -127,10 +127,10 @@ abstract class Shipping extends TypeAgent
         $arrTypes = deserialize($this->product_types);
 
         if (is_array($arrTypes) && !empty($arrTypes)) {
-            $arrProducts = Isotope::getCart()->getProducts();
+            $arrItems = Isotope::getCart()->getItems();
 
-            foreach ($arrProducts as $objProduct) {
-                if (!in_array($objProduct->type, $arrTypes)) {
+            foreach ($arrItems as $objItem) {
+                if (!$objItem->hasProduct() || !in_array($objItem->getProduct()->type, $arrTypes)) {
                     return false;
                 }
             }
@@ -228,18 +228,6 @@ abstract class Shipping extends TypeAgent
 
 
     /**
-     * This function is used to gather any addition shipping options that might be available specific to the current customer or order.
-     * For example, expedited shipping based on customer location.
-     * @param object
-     * @return string
-     */
-    public function getShippingOptions(&$objModule)
-    {
-        return '';
-    }
-
-
-    /**
      * Return the checkout review information.
      *
      * Use this to return custom checkout information about this shipping module.
@@ -259,7 +247,7 @@ abstract class Shipping extends TypeAgent
     {
         if ($this->getPrice() == 0)
         {
-            return false;
+            return null;
         }
 
         return ProductCollectionSurcharge::createForShippingInCollection($this, $objCollection);

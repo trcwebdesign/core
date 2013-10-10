@@ -108,11 +108,6 @@ abstract class ProductCollection extends TypeAgent
     {
         parent::__construct($objResult);
 
-        if ($objResult !== null) {
-            $this->blnModified = false;
-            $this->arrSettings = deserialize($this->arrData['settings'], true);
-        }
-
         // Do not use __destruct, because Database object might be destructed first (see http://github.com/contao/core/issues/2236)
         register_shutdown_function(array($this, 'saveDatabase'));
     }
@@ -483,6 +478,7 @@ abstract class ProductCollection extends TypeAgent
      */
     public function setRow(array $arrData)
     {
+        $this->blnModified = false;
         $this->arrSettings = deserialize($arrData['settings'], true);
 
         unset($arrData['settings']);
@@ -560,11 +556,12 @@ abstract class ProductCollection extends TypeAgent
             }
         }
 
+        $intPid = $this->id;
         $intAffectedRows = parent::delete();
 
-        if ($intAffectedRows > 0) {
-            \Database::getInstance()->query("DELETE FROM tl_iso_product_collection_item WHERE pid={$this->id}");
-            \Database::getInstance()->query("DELETE FROM tl_iso_addresses WHERE ptable='" . static::$strTable . "' AND pid={$this->id}");
+        if ($intAffectedRows > 0 && $intPid > 0) {
+            \Database::getInstance()->query("DELETE FROM tl_iso_product_collection_item WHERE pid=$intPid");
+            \Database::getInstance()->query("DELETE FROM tl_iso_addresses WHERE ptable='" . static::$strTable . "' AND pid=$intPid");
         }
 
         $this->arrCache = array();
@@ -658,7 +655,7 @@ abstract class ProductCollection extends TypeAgent
             $arrSurcharges = $this->getSurcharges();
 
             foreach ($arrSurcharges as $objSurcharge) {
-                if ($objSurcharge->add !== false) {
+                if ($objSurcharge->addToTotal !== false) {
                     $fltAmount += $objSurcharge->total_price;
                 }
             }
@@ -678,7 +675,7 @@ abstract class ProductCollection extends TypeAgent
             $arrSurcharges = $this->getSurcharges();
 
             foreach ($arrSurcharges as $objSurcharge) {
-                if ($objSurcharge->add !== false) {
+                if ($objSurcharge->addToTotal !== false) {
                     $fltAmount += $objSurcharge->tax_free_total_price;
                 }
             }
@@ -777,7 +774,14 @@ abstract class ProductCollection extends TypeAgent
 
         $objItem = ProductCollectionItem::findBy(array('pid=?', 'type=?', 'product_id=?', 'options=?'), array($this->id, $strClass, $objProduct->id, serialize($objProduct->getOptions())));
 
-        return (null === $objItem) ? null : $this->arrItems[$objItem->id];
+        // @todo remove this collection lookup as soon as the Model Registry is available
+        if (null !== $objItem) {
+            $this->getItems();
+
+            $objItem = $this->arrItems[$objItem->id];
+        }
+
+        return $objItem;
     }
 
 
@@ -875,7 +879,7 @@ abstract class ProductCollection extends TypeAgent
             $objItem->quantity          = (int) $intQuantity;
             $objItem->price             = (float) ($objProduct->getPrice($this) ? $objProduct->getPrice($this)->getAmount((int) $intQuantity) : 0);
             $objItem->tax_free_price    = (float) ($objProduct->getPrice($this) ? $objProduct->getPrice($this)->getNetAmount((int) $intQuantity) : 0);
-            $objItem->jumpTo            = (int) $arrConfig['jumpTo'];
+            $objItem->jumpTo            = (int) $arrConfig['jumpTo']->id;
 
             $objItem->save();
 
@@ -992,16 +996,32 @@ abstract class ProductCollection extends TypeAgent
         }
 
         $arrItems[$intId]->delete();
+
+        unset($this->arrItems[$intId]);
+
         $this->setModified(true);
 
         return true;
     }
 
-
+    /**
+     * Find surcharges for the current collection
+     * @return  array
+     */
     public function getSurcharges()
     {
         if (null === $this->arrSurcharges) {
-            $this->arrSurcharges = $this->isLocked() ? ProductCollectionSurcharge::findBy('pid', $this->id) : ProductCollectionSurcharge::findForCollection($this);
+            if ($this->isLocked()) {
+                $this->arrSurcharges = array();
+
+                if (($objSurcharges = ProductCollectionSurcharge::findBy('pid', $this->id)) !== null) {
+                    while ($objSurcharges->next()) {
+                        $this->arrSurcharges[] = $objSurcharges->current();
+                    }
+                }
+            } else {
+                $this->arrSurcharges = ProductCollectionSurcharge::findForCollection($this);
+            }
         }
 
         return $this->arrSurcharges;
@@ -1024,12 +1044,16 @@ abstract class ProductCollection extends TypeAgent
         }
 
         // Store in arrData, otherwise each call to __set would trigger setModified(true)
-        $this->arrData['source_collection_id'] = $objSource->id;
-        $this->arrData['config_id']            = $objSource->config_id;
-        $this->arrData['store_id']             = $objSource->store_id;
-        $this->arrData['member']               = $objSource->member;
-        $this->arrData['language']             = $GLOBALS['TL_LANGUAGE'];
-        $this->arrData['currency']             = $objConfig->currency;
+        $this->arrData['source_collection_id']  = $objSource->id;
+        $this->arrData['config_id']             = $objSource->config_id;
+        $this->arrData['store_id']              = $objSource->store_id;
+        $this->arrData['address1_id']           = $objSource->address1_id;
+        $this->arrData['address2_id']           = $objSource->address2_id;
+        $this->arrData['payment_id']            = $objSource->payment_id;
+        $this->arrData['shipping_id']           = $objSource->shipping_id;
+        $this->arrData['member']                = $objSource->member;
+        $this->arrData['language']              = $GLOBALS['TL_LANGUAGE'];
+        $this->arrData['currency']              = $objConfig->currency;
 
         $this->pageId                           = (int) $objPage->id;
 
@@ -1044,9 +1068,8 @@ abstract class ProductCollection extends TypeAgent
 
     /**
      * Copy product collection items from another collection to this one (e.g. Cart to Order)
-     * @param object
-     * @param boolean
-     * @return array
+     * @param   IsotopeProductCollection
+     * @return  array
      */
     public function copyItemsFrom(IsotopeProductCollection $objSource)
     {
@@ -1105,6 +1128,37 @@ abstract class ProductCollection extends TypeAgent
 
 
     /**
+     * Copy product collection surcharges from another collection to this one (e.g. Cart to Order)
+     * @param   IsotopeProductCollection
+     * @return  array
+     */
+    public function copySurchargesFrom(IsotopeProductCollection $objSource, array $arrItemMap=array())
+    {
+        $arrIds = array();
+        $time = time();
+        $sorting = 0;
+
+        foreach ($objSource->getSurcharges() as $objSourceSurcharge) {
+            $objSurcharge = clone $objSourceSurcharge;
+            $objSurcharge->pid = $this->id;
+            $objSurcharge->tstamp = $time;
+            $objSurcharge->sorting = $sorting;
+
+            // Convert surcharge amount for individual product IDs
+            $objSurcharge->convertCollectionItemIds($arrItemMap);
+
+            $objSurcharge->save();
+
+            $arrIds[$objSourceSurcharge->id] = $objSurcharge->id;
+
+            $sorting += 128;
+        }
+
+        return $arrIds;
+    }
+
+
+    /**
      * Calculate the weight of all products in the cart in a specific weight unit
      * @param string
      * @return mixed
@@ -1133,14 +1187,12 @@ abstract class ProductCollection extends TypeAgent
     /**
      * Add the collection to a template
      * @param   object
-     * @param   callable    Callable to pass to getItems() e.g. for sorting
+     * @param   array
      */
-    public function addToTemplate(\Isotope\Template $objTemplate, $varCallable=null)
+    public function addToTemplate(\Isotope\Template $objTemplate, array $arrConfig=array())
     {
-        // @todo config should be passed from the frontend module
-        $arrConfig = array();
         $arrGalleries = array();
-        $arrItems = $this->addItemsToTemplate($objTemplate, $varCallable);
+        $arrItems = $this->addItemsToTemplate($objTemplate, $arrConfig['sorting']);
 
         $objTemplate->collection = $this;
         $objTemplate->config = ($this->getRelated('config_id') || Isotope::getConfig());
@@ -1170,7 +1222,7 @@ abstract class ProductCollection extends TypeAgent
             }
 
             $strCacheKey = 'product' . $objItem->product_id . '_' . $strAttribute;
-            $arrConfig['jumpTo'] = $objItem->jumpTo;
+            $arrConfig['jumpTo'] = $objItem->getRelated('jumpTo');
 
             if (!isset($arrGalleries[$strCacheKey])) {
                 $arrGalleries[$strCacheKey] = Gallery::createForProductAttribute(
@@ -1184,8 +1236,8 @@ abstract class ProductCollection extends TypeAgent
         };
 
         // !HOOK: allow overriding of the template
-        if (isset($GLOBALS['ISO_HOOKS']['generateCollection']) && is_array($GLOBALS['ISO_HOOKS']['generateCollection'])) {
-            foreach ($GLOBALS['ISO_HOOKS']['generateCollection'] as $callback) {
+        if (isset($GLOBALS['ISO_HOOKS']['addCollectionToTemplate']) && is_array($GLOBALS['ISO_HOOKS']['addCollectionToTemplate'])) {
+            foreach ($GLOBALS['ISO_HOOKS']['addCollectionToTemplate'] as $callback) {
                 $objCallback = \System::importStatic($callback[0]);
                 $objCallback->$callback[1]($objTemplate, $arrItems, $this);
             }
@@ -1289,8 +1341,8 @@ abstract class ProductCollection extends TypeAgent
             'rowClass'          => trim('product ' . (($blnHasProduct && $objProduct->isNew()) ? 'new ' : '') . $objProduct->cssID[1]),
         );
 
-        if ($objItem->jumpTo && $blnHasProduct) {
-            $arrItem['href'] = $objProduct->generateUrl((int) $objItem->jumpTo);
+        if (null !== $objItem->getRelated('jumpTo') && $blnHasProduct) {
+            $arrItem['href'] = $objProduct->generateUrl($objItem->getRelated('jumpTo'));
         }
 
         unset($GLOBALS['ACTIVE_PRODUCT']);
@@ -1305,5 +1357,65 @@ abstract class ProductCollection extends TypeAgent
     protected function getMessageIfErrorsInItems()
     {
         return $GLOBALS['TL_LANG']['ERR']['collectionErrorInItems'];
+    }
+
+    /**
+     * Generate the next higher Document Number based on existing records
+     * @param   string
+     * @param   int
+     * @return  string
+     */
+    protected function generateDocumentNumber($strPrefix, $intDigits)
+    {
+        if ($this->arrData['document_number'] != '') {
+            return $this->arrData['document_number'];
+        }
+
+        // !HOOK: generate a custom order ID
+        if (isset($GLOBALS['ISO_HOOKS']['generateDocumentNumber']) && is_array($GLOBALS['ISO_HOOKS']['generateDocumentNumber'])) {
+            foreach ($GLOBALS['ISO_HOOKS']['generateDocumentNumber'] as $callback) {
+                $objCallback = \System::importStatic($callback[0]);
+                $strOrderId = $objCallback->$callback[1]($this, $strPrefix, $intDigits);
+
+                if ($strOrderId !== false) {
+                    $this->arrData['document_number'] = $strOrderId;
+                    break;
+                }
+            }
+        }
+
+        if ($this->arrData['document_number'] == '') {
+            $strPrefix = Isotope::getInstance()->call('replaceInsertTags', $strPrefix);
+            $intPrefix = utf8_strlen($strPrefix);
+
+            // Lock tables so no other order can get the same ID
+            \Database::getInstance()->lockTables(array(static::$strTable=>'WRITE'));
+
+            // Retrieve the highest available order ID
+            $objMax = \Database::getInstance()->prepare("
+                SELECT document_number
+                FROM " . static::$strTable . "
+                WHERE
+                    type=?
+                    " . ($strPrefix != '' ? " AND document_number LIKE '$strPrefix%' AND " : '') . "
+                    AND store_id=?
+                ORDER BY CAST(" . ($strPrefix != '' ? "SUBSTRING(document_number, " . ($intPrefix+1) . ")" : 'document_number') . " AS UNSIGNED) DESC
+            ")->limit(1)->execute(
+                array_search(get_called_class(), static::getModelTypes()),
+                Isotope::getCart()->store_id
+            );
+
+            $intMax = (int) substr($objMax->document_number, $intPrefix);
+
+            $this->arrData['document_number'] = $strPrefix . str_pad($intMax+1, $intDigits, '0', STR_PAD_LEFT);
+        }
+
+        \Database::getInstance()->prepare("
+            UPDATE " . static::$strTable . " SET document_number=? WHERE id=?
+        ")->execute($this->arrData['document_number'], $this->id);
+
+        \Database::getInstance()->unlockTables();
+
+        return $this->arrData['document_number'];
     }
 }

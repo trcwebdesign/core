@@ -12,7 +12,10 @@
 
 namespace Isotope;
 
+use Isotope\Model\Attribute;
 use Isotope\Model\Group;
+use Isotope\Model\Product;
+use Isotope\Model\ProductPrice;
 use Isotope\Model\ProductType;
 use Isotope\Model\TaxClass;
 
@@ -46,7 +49,6 @@ class ProductCallbacks extends \Backend
      * @var array
      */
     protected $arrProductTypes;
-
 
     /**
      * Cache number of downloads per product
@@ -85,6 +87,8 @@ class ProductCallbacks extends \Backend
             $blnDownloads = false;
             $blnVariants = false;
             $blnAdvancedPrices = false;
+            $blnShowSku = false;
+            $blnShowPrice = false;
 
             if (($objProductTypes = ProductType::findAllUsed()) !== null) {
                 while ($objProductTypes->next())
@@ -102,6 +106,14 @@ class ProductCallbacks extends \Backend
 
                     if ($objType->hasAdvancedPrices()) {
                         $blnAdvancedPrices = true;
+                    }
+
+                    if (in_array('sku', $objType->getAttributes())) {
+                        $blnShowSku = true;
+                    }
+
+                    if (in_array('price', $objType->getAttributes())) {
+                        $blnShowPrice = true;
                     }
                 }
             }
@@ -129,6 +141,14 @@ class ProductCallbacks extends \Backend
             // Disable prices button if not enabled in any product type
             if (!$blnAdvancedPrices) {
                 unset($GLOBALS['TL_DCA']['tl_iso_products']['list']['operations']['prices']);
+            }
+
+            if (!$blnShowSku) {
+                unset($GLOBALS['TL_DCA'][Product::getTable()]['list']['label']['fields'][2]);
+            }
+
+            if (!$blnShowPrice) {
+                unset($GLOBALS['TL_DCA'][Product::getTable()]['list']['label']['fields'][3]);
             }
 
             // Disable related categories if none are defined
@@ -274,11 +294,6 @@ class ProductCallbacks extends \Backend
      */
     public function checkPermission()
     {
-        if (\Input::get('act') != '' && (\Input::get('mode') == '' || is_numeric(\Input::get('mode'))))
-        {
-            $GLOBALS['TL_DCA']['tl_iso_products']['config']['closed'] = false;
-        }
-
         $session = $this->Session->getData();
         $arrProducts = \Isotope\Backend::getAllowedProductIds();
 
@@ -297,7 +312,7 @@ class ProductCallbacks extends \Backend
 
             if (false === $arrProducts)
             {
-                unset($GLOBALS['TL_DCA']['tl_iso_products']['list']['global_operations']['new_product']);
+                $GLOBALS['TL_DCA']['tl_iso_products']['config']['closed'] = true;
             }
         }
         else
@@ -330,8 +345,8 @@ class ProductCallbacks extends \Backend
             // Overwrite session
             $this->Session->setData($session);
 
-            if (\Input::get('id') > 0 && !in_array(\Input::get('id'), $GLOBALS['TL_DCA']['tl_iso_products']['list']['sorting']['root']))
-            {
+            // Check if the product is accessible by user
+            if (\Input::get('id') > 0 && !in_array(\Input::get('id'), $GLOBALS['TL_DCA']['tl_iso_products']['list']['sorting']['root']) && !in_array(\Input::get('id'), $session['new_records']['tl_iso_products'])) {
                 \System::log('Cannot access product ID '.\Input::get('id'), __METHOD__, TL_ERROR);
                 \Controller::redirect('contao/main.php?act=error');
             }
@@ -355,9 +370,6 @@ class ProductCallbacks extends \Backend
         $arrFields = &$GLOBALS['TL_DCA']['tl_iso_products']['fields'];
         $arrAttributes = &$GLOBALS['TL_DCA']['tl_iso_products']['attributes'];
 
-        // Unset foreign key to activate options_callback
-        unset($arrFields['type']['foreignKey']);
-
         $arrTypes = $this->arrProductTypes;
         $blnVariants = false;
         $act = \Input::get('act');
@@ -370,7 +382,7 @@ class ProductCallbacks extends \Backend
                 $objType = $this->arrProductTypes[($objProduct->pid > 0 ? $objProduct->parent_type : $objProduct->type)];
                 $arrTypes = null === $objType ? array() : array($objType);
 
-                if ($objProduct->pid > 0 || $act != 'edit') {
+                if ($objProduct->pid > 0 || ($act != 'edit' && $act != 'show')) {
                     $blnVariants = true;
                 }
             }
@@ -404,36 +416,45 @@ class ProductCallbacks extends \Backend
             }
 
             // Go through each enabled field and build palette
-            foreach ($arrEnabled as $name) {
+            foreach ($arrFields as $name => $arrField) {
+                if (in_array($name, $arrEnabled)) {
 
-                // Do not show customer defined fields
-                if (null !== $arrAttributes[$name] && $arrAttributes[$name]->isCustomerDefined()) {
-                    continue;
-                }
+                    // Do not show customer defined fields
+                    if (null !== $arrAttributes[$name] && $arrAttributes[$name]->isCustomerDefined()) {
+                        continue;
+                    }
 
-                // Variant fields can only be edited in variant mode
-                if (null !== $arrAttributes[$name] && $arrAttributes[$name]->isVariantOption() && !$blnVariants) {
-                    continue;
-                }
+                    // Variant fields can only be edited in variant mode
+                    if (null !== $arrAttributes[$name] && $arrAttributes[$name]->isVariantOption() && !$blnVariants) {
+                        continue;
+                    }
 
-                // Field cannot be edited in variant
-                if ($blnVariants && $arrAttributes[$name]->inherit) {
-                    continue;
-                }
+                    // Field cannot be edited in variant
+                    if ($blnVariants && $arrAttributes[$name]->inherit) {
+                        continue;
+                    }
 
-                $arrPalette[$arrConfig[$name]['legend']][] = $name;
+                    $arrPalette[$arrConfig[$name]['legend']][] = $name;
 
-                // Apply product type attribute config
-                if ($arrConfig[$name]['tl_class'] != '') {
-                    $arrFields[$name]['eval']['tl_class'] = $arrConfig[$name]['tl_class'];
-                }
+                    // Apply product type attribute config
+                    if ($arrConfig[$name]['tl_class'] != '') {
+                        $arrFields[$name]['eval']['tl_class'] = $arrConfig[$name]['tl_class'];
+                    }
 
-                if ($arrConfig[$name]['mandatory'] > 0) {
-                    $arrFields[$name]['eval']['mandatory'] = $arrConfig[$name]['mandatory'] == 1 ? false : true;
-                }
+                    if ($arrConfig[$name]['mandatory'] > 0) {
+                        $arrFields[$name]['eval']['mandatory'] = $arrConfig[$name]['mandatory'] == 1 ? false : true;
+                    }
 
-                if ($blnVariants && in_array($name, $arrCanInherit) && !$arrAttributes[$name]->isVariantOption() && !in_array($name, array('price', 'published', 'start', 'stop'))) {
-                    $arrInherit[$name] = Isotope::formatLabel('tl_iso_products', $name);
+                    if ($blnVariants && in_array($name, $arrCanInherit) && !$arrAttributes[$name]->isVariantOption() && !in_array($name, array('price', 'published', 'start', 'stop'))) {
+                        $arrInherit[$name] = Isotope::formatLabel('tl_iso_products', $name);
+                    }
+
+                } else {
+
+                    // Hide field from "show" option
+                    if (!isset($arrField['attributes']) || $arrField['inputType'] != '') {
+                        $arrFields[$name]['eval']['doNotShow'] = true;
+                    }
                 }
             }
 
@@ -448,7 +469,7 @@ class ProductCallbacks extends \Backend
             $arrFields['inherit']['options'] = $arrInherit;
 
             // Add palettes
-            $GLOBALS['TL_DCA']['tl_iso_products']['palettes'][$objType->id] = ($blnVariants ? 'inherit,' : '') . implode(';', $arrLegends);
+            $GLOBALS['TL_DCA']['tl_iso_products']['palettes'][($blnVariants ? 'default' : $objType->id)] = ($blnVariants ? 'inherit,' : '') . implode(';', $arrLegends);
         }
 
         if ($act !== 'edit') {
@@ -458,39 +479,13 @@ class ProductCallbacks extends \Backend
 
         // Remove non-active fields from multi-selection
         if ($blnVariants && !$blnSingleRecord) {
-            $arrInclude = call_user_func_array('array_merge', $arrPalette);
+            $arrInclude = empty($arrPalette) ? array() : call_user_func_array('array_merge', $arrPalette);
 
             foreach ($arrFields as $name => $config) {
                 if ($arrFields[$name]['attributes']['legend'] != '' && !in_array($name, $arrInclude)) {
                     $arrFields[$name]['exclude'] = true;
                 }
             }
-        }
-    }
-
-
-    /**
-     * Load the default product type
-     * @param object
-     * @return void
-     */
-    public function loadDefaultProductType($dc)
-    {
-        if (\Input::get('act') !== 'create') {
-            return;
-        }
-
-        $objGroup = Group::findByPk($this->Session->get('iso_products_gid'));
-
-        if (null === $objGroup || null === $objGroup->getRelated('product_type')) {
-            $objType = ProductType::findFallback();
-        } else {
-            $objType = $objGroup->getRelated('product_type');
-        }
-
-        if (null !== $objType)
-        {
-            $GLOBALS['TL_DCA']['tl_iso_products']['fields']['type']['default'] = $objType->id;
         }
     }
 
@@ -508,7 +503,7 @@ window.addEvent('domready', function() {
   $('cut').addEvents({
     'click': function(e) {
       e.preventDefault();
-      Isotope.openModalGroupSelector({'width':765,'title':'".specialchars($GLOBALS['TL_LANG']['MSC']['groupPicker'])."','url':'system/modules/isotope/public/group.php?do=".\Input::get('do')."&amp;table=tl_iso_groups&amp;field=gid&amp;value=".$this->Session->get('iso_products_gid')."','action':'moveProducts','trigger':$(this)});
+      Isotope.openModalGroupSelector({'width':765,'title':'".specialchars($GLOBALS['TL_LANG']['MSC']['groupPicker'])."','url':'system/modules/isotope/group.php?do=".\Input::get('do')."&amp;table=tl_iso_groups&amp;field=gid&amp;value=".$this->Session->get('iso_products_gid')."','action':'moveProducts','trigger':$(this)});
     },
     'closeModal': function() {
       var form = $('tl_select'),
@@ -524,41 +519,89 @@ window.addEvent('domready', function() {
 
     /**
      * Change the displayed columns in the variants view
-     * @todo should only show variant columns of the current product type
-     * @todo use $GLOBALS['ISO_CONFIG']['variant_options']
      */
     public function changeVariantColumns()
     {
-        if (!\Input::get('id'))
-        {
+        if (\Input::get('act') != '' || \Input::get('id') == '' || ($objProduct = Product::findByPk(\Input::get('id'))) === null) {
             return;
         }
 
-        $arrColumns = array();
+        $GLOBALS['TL_DCA'][$objProduct->getTable()]['list']['sorting']['fields'] = array('id');
+        $GLOBALS['TL_DCA']['tl_iso_products']['fields']['alias']['sorting'] = false;
 
-        // Collect only variant-specific fields
-        foreach ($GLOBALS['TL_DCA']['tl_iso_products']['fields'] as $strName=>$arrField)
-        {
-            if ($arrField['eval']['variant_option'])
-            {
-                $arrColumns[] = $strName;
-            }
+        $arrFields = array();
+        $arrVariantFields = $objProduct->getRelated('type')->getVariantAttributes();
+        $arrVariantOptions = array_intersect($arrVariantFields, Attribute::getVariantOptionFields());
+
+        if (in_array('images', $arrVariantFields)) {
+            $arrFields[] = 'images';
         }
 
-        if (!empty($arrColumns))
-        {
-            $arrDefault = array('images', 'name');
-
-            // Limit the number of columns if there are more than 3
-            if (count($arrColumns) > 3)
-            {
-                $GLOBALS['TL_DCA']['tl_iso_products']['list']['label']['fields'] = $arrDefault;
-                $GLOBALS['TL_DCA']['tl_iso_products']['list']['label']['variantFields'] = $arrColumns;
-                return;
-            }
-
-            $GLOBALS['TL_DCA']['tl_iso_products']['list']['label']['fields'] = array_merge($arrDefault, $arrColumns);
+        if (in_array('name', $arrVariantFields)) {
+            $arrFields[] = 'name';
+            $GLOBALS['TL_DCA'][$objProduct->getTable()]['list']['sorting']['fields'] = array('name');
         }
+
+        if (in_array('sku', $arrVariantFields)) {
+            $arrFields[] = 'sku';
+            $GLOBALS['TL_DCA'][$objProduct->getTable()]['list']['sorting']['fields'] = array('sku');
+        }
+
+        if (in_array('price', $arrVariantFields)) {
+            $arrFields[] = 'price';
+        }
+
+        // Limit the number of columns if there are more than 2
+        if (count($arrVariantOptions) > 2) {
+            $arrFields[] = 'variantFields';
+            $GLOBALS['TL_DCA'][$objProduct->getTable()]['list']['label']['variantFields'] = $arrVariantOptions;
+        } else {
+            $arrFields = array_merge($arrFields, $arrVariantOptions);
+        }
+
+        $GLOBALS['TL_DCA'][$objProduct->getTable()]['list']['label']['fields'] = $arrFields;
+
+        // Make all column fields sortable
+        foreach ($GLOBALS['TL_DCA'][$objProduct->getTable()]['fields'] as $name => $arrField) {
+            $GLOBALS['TL_DCA']['tl_iso_products']['fields'][$name]['sorting'] = ($name != 'price' && in_array($name, $arrFields));
+        }
+    }
+
+
+
+    /////////////////////////
+    //  !oncreate_callback
+    /////////////////////////
+
+
+    /**
+     * Store initial values when creating a product
+     * @param   string
+     * @param   int
+     * @param   array
+     * @param   DataContainer
+     */
+    public function storeInitialValues($strTable, $insertID, $arrSet, $dc)
+    {
+        if ($arrSet['pid'] > 0) {
+            return;
+        }
+
+        $intType = 0;
+        $intGroup = (int) \Session::getInstance()->get('iso_products_gid') ?: (\BackendUser::getInstance()->isAdmin ? 0 : intval(\BackendUser::getInstance()->iso_groups[0]));
+        $objGroup = Group::findByPk($intGroup);
+
+        if (null === $objGroup || null === $objGroup->getRelated('product_type')) {
+            $objType = ProductType::findFallback();
+        } else {
+            $objType = $objGroup->getRelated('product_type');
+        }
+
+        if (null !== $objType) {
+            $intType = $objType->id;
+        }
+
+        \Database::getInstance()->prepare("UPDATE $strTable SET gid=?, type=?, dateAdded=? WHERE id=?")->execute($intGroup, $intType, time(), $insertId);
     }
 
 
@@ -584,28 +627,6 @@ window.addEvent('domready', function() {
         }
     }
 
-
-
-    /////////////////////////
-    //  !onsubmit_callback
-    /////////////////////////
-
-
-    /**
-     * Store the date when the product has been added
-     * @param DataContainer
-     * @return void
-     */
-    public function storeDateAdded(\DataContainer $dc)
-    {
-        // Return if there is no active record (override all)
-        if (!$dc->activeRecord || $dc->activeRecord->dateAdded > 0)
-        {
-            return;
-        }
-
-        \Database::getInstance()->prepare("UPDATE tl_iso_products SET dateAdded=? WHERE id=?")->execute(time(), $dc->id);
-    }
 
 
     /////////////////////////
@@ -727,12 +748,32 @@ window.addEvent('domready', function() {
      */
     public function generateFilterButtons()
     {
+        if (\Input::get('id') > 0) {
+            return;
+        }
+
         $session = $this->Session->getData();
         $arrPages = (array) $session['filter']['tl_iso_products']['iso_pages'];
+        $blnGroups = true;
+
+        // Check permission
+        if (!$this->User->isAdmin) {
+            $groups = deserialize($this->User->iso_groups);
+
+            if (!is_array($groups) || empty($groups)) {
+                $blnGroups = false;
+            }
+
+            // Allow to manage groups
+            if (is_array($this->User->iso_groupp) && !empty($this->User->iso_groupp))
+            {
+                $blnGroups = true;
+            }
+        }
 
         return '
 <div class="tl_filter iso_filter tl_subpanel">
-<input type="button" id="groupFilter" class="tl_submit' . ($this->Session->get('iso_products_gid') ? ' active' : '') . '" onclick="Backend.getScrollOffset();Isotope.openModalGroupSelector({\'width\':765,\'title\':\''.specialchars($GLOBALS['TL_LANG']['tl_iso_products']['groups'][0]).'\',\'url\':\'system/modules/isotope/public/group.php?do='.\Input::get('do').'&amp;table=tl_iso_groups&amp;field=gid&amp;value='.$this->Session->get('iso_products_gid').'\',\'action\':\'filterGroups\'});return false" value="'.specialchars($GLOBALS['TL_LANG']['MSC']['filterByGroups']).'">
+' . ($blnGroups ? '<input type="button" id="groupFilter" class="tl_submit' . ($this->Session->get('iso_products_gid') ? ' active' : '') . '" onclick="Backend.getScrollOffset();Isotope.openModalGroupSelector({\'width\':765,\'title\':\''.specialchars($GLOBALS['TL_LANG']['tl_iso_products']['product_groups'][0]).'\',\'url\':\'system/modules/isotope/group.php?do='.\Input::get('do').'&amp;table=tl_iso_groups&amp;field=gid&amp;value='.$this->Session->get('iso_products_gid').'\',\'action\':\'filterGroups\'});return false" value="'.specialchars($GLOBALS['TL_LANG']['MSC']['filterByGroups']).'">' : '') . '
 <input type="button" id="pageFilter" class="tl_submit' . (!empty($arrPages) ? ' active' : '') . '" onclick="Backend.getScrollOffset();Isotope.openModalPageSelector({\'width\':765,\'title\':\''.specialchars($GLOBALS['TL_LANG']['MOD']['page'][0]).'\',\'url\':\'contao/page.php?do='.\Input::get('do').'&amp;table=tl_iso_products&amp;field=pages&amp;value='.implode(',', $arrPages).'\',\'action\':\'filterPages\'});return false" value="'.specialchars($GLOBALS['TL_LANG']['MSC']['filterByPages']).'">
 </div>';
     }
@@ -744,6 +785,10 @@ window.addEvent('domready', function() {
      */
     public function generateAdvancedFilters()
     {
+        if (\Input::get('id') > 0) {
+            return;
+        }
+
         $session = $this->Session->getData();
 
         // Filters
@@ -810,47 +855,64 @@ window.addEvent('domready', function() {
      */
     public function getRowLabel($row, $label, $dc, $args)
     {
-        $arrImages = deserialize($row['images']);
-        $args[0] = '&nbsp;';
+        $objProduct = Product::findByPk($row['id']);
 
-        // Add an image
-        if (is_array($arrImages) && !empty($arrImages))
-        {
-            foreach ($arrImages as $image)
-            {
-                $strImage = 'isotope/' . strtolower(substr($image['src'], 0, 1)) . '/' . $image['src'];
+        foreach ($GLOBALS['TL_DCA'][$dc->table]['list']['label']['fields'] as $i => $field) {
+            switch ($field) {
 
-                if (!is_file(TL_ROOT . '/' . $strImage))
-                {
-                    continue;
-                }
+                // Add an image
+                case 'images':
+                    $arrImages = deserialize($objProduct->images);
+                    $args[$i] = '&nbsp;';
 
-                $size = @getimagesize(TL_ROOT . '/' . $strImage);
+                    if (is_array($arrImages) && !empty($arrImages)) {
+                        foreach ($arrImages as $image) {
+                            $strImage = 'isotope/' . strtolower(substr($image['src'], 0, 1)) . '/' . $image['src'];
 
-                $args[0] = sprintf('<a href="%s" onclick="Backend.openModalImage({\'width\':%s,\'title\':\'%s\',\'url\':\'%s\'});return false"><img src="%s" alt="%s" align="left"></a>',
-                                    $strImage, $size[0], str_replace("'", "\\'", $row['name']), $strImage,
-                                    \Image::get($strImage, 50, 50, 'crop'), $image['alt']);
-                break;
+                            if (!is_file(TL_ROOT . '/' . $strImage)) {
+                                continue;
+                            }
+
+                            $size = @getimagesize(TL_ROOT . '/' . $strImage);
+
+                            $args[$i] = sprintf('<a href="%s" onclick="Backend.openModalImage({\'width\':%s,\'title\':\'%s\',\'url\':\'%s\'});return false"><img src="%s" alt="%s" align="left"></a>',
+                                                $strImage, $size[0], str_replace("'", "\\'", $objProduct->name), $strImage,
+                                                \Image::get($strImage, 50, 50, 'crop'), $image['alt']);
+                            break;
+                        }
+                    }
+                    break;
+
+                case 'name':
+                    $args[$i] = $objProduct->name;
+
+                    if ($row['pid'] == 0 && $this->arrProductTypes[$row['type']] && $this->arrProductTypes[$row['type']]->hasVariants()) {
+                        // Add a variants link
+                        $args[$i] = sprintf('<a href="%s" title="%s">%s</a>', ampersand(\Environment::get('request')) . '&amp;id=' . $row['id'], specialchars($GLOBALS['TL_LANG'][$dc->table]['showVariants']), $args[$i]);
+                    }
+                    break;
+
+                case 'price':
+                    $objPrice = ProductPrice::findPrimaryByProduct($row['id']);
+
+                    if (null !== $objPrice) {
+                        $objTax = $objPrice->getRelated('tax_class');
+                        $strTax = (null === $objTax ? '' : ' ('.$objTax->getLabel().')');
+
+                        $args[$i] = $objPrice->getValueForTier(1) . $strTax;
+                    }
+                    break;
+
+                case 'variantFields':
+                    $attributes = array();
+
+                    foreach ($GLOBALS['TL_DCA'][$dc->table]['list']['label']['variantFields'] as $field) {
+                        $attributes[] = '<strong>' . Isotope::formatLabel($dc->table, $field) . ':</strong>&nbsp;' . Isotope::formatValue($dc->table, $field, $objProduct->$field);
+                    }
+
+                    $args[$i] = ($args[$i] ? $args[$i].'<br>' : '') . implode(', ', $attributes);
+                    break;
             }
-        }
-
-        // Add a variants link
-        if (!$row['pid'])
-        {
-            $args[1] = sprintf('<a href="%s" title="%s">%s</a>', ampersand(\Environment::get('request')) . '&amp;id=' . $row['id'], specialchars($GLOBALS['TL_LANG']['tl_iso_products']['showVariants']), $row['name']);
-        }
-
-        // Limit the number of columns
-        if ($row['pid'] && isset($GLOBALS['TL_DCA']['tl_iso_products']['list']['label']['variantFields']))
-        {
-            $attributes = array();
-
-            foreach ($GLOBALS['TL_DCA']['tl_iso_products']['list']['label']['variantFields'] as $field)
-            {
-                $attributes[] = '<strong>' . $GLOBALS['TL_DCA']['tl_iso_products']['fields'][$field]['label'][0] . ':</strong>&nbsp;' . $GLOBALS['TL_DCA']['tl_iso_products']['fields'][$field]['options'][$row[$field]];
-            }
-
-            $args[1] .= '<br>' . implode(', ', $attributes);
         }
 
         return $args;
@@ -951,34 +1013,6 @@ window.addEvent('domready', function() {
         }
 
         return '<a href="'.$this->addToUrl($href.'&amp;id='.$row['id']).'" title="'.specialchars(sprintf($GLOBALS['TL_DCA']['tl_iso_products']['list']['operations']['downloads']['label'][2], (int) $this->arrDownloads[$row['id']]) . $title).'"'.$attributes.'>'.\Image::getHtml($icon, $label) .'</a> ';
-    }
-
-
-    /**
-     * Show/hide the prices button
-     * @param array
-     * @param string
-     * @param string
-     * @param string
-     * @param string
-     * @param string
-     * @return string
-     */
-    public function pricesButton($row, $href, $label, $title, $icon, $attributes)
-    {
-        if (null === $this->arrProductTypes[$row['type']] || !$this->arrProductTypes[$row['type']]->hasAdvancedPrices())
-        {
-            return '';
-        }
-
-        $arrAttributes = $row['pid'] > 0 ? $this->arrProductTypes[$row['type']]->getVariantAttributes() : $this->arrProductTypes[$row['type']]->getAttributes();
-
-        if (!in_array('price', $arrAttributes))
-        {
-            return '';
-        }
-
-        return '<a href="'.$this->addToUrl($href.'&amp;id='.$row['id']).'" title="'.specialchars($title).'"'.$attributes.'>'.\Image::getHtml($icon, $label).'</a> ';
     }
 
 

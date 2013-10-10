@@ -12,6 +12,8 @@
 
 namespace Isotope\Interfaces;
 
+use Isotope\Interfaces\IsotopeProductCollection;
+
 
 /**
  * Checkout steps handle individual steps in the Isotope checkout module
@@ -42,4 +44,11 @@ interface IsotopeCheckoutStep
      * @return  array
      */
     public function review();
+
+    /**
+     * Return array of tokens for email templates
+     * @param   IsotopeProductCollection
+     * @return  array
+     */
+    public function getEmailTokens(IsotopeProductCollection $objCollection);
 }

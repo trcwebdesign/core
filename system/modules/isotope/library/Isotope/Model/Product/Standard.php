@@ -16,6 +16,7 @@ use Isotope\Isotope;
 use Isotope\Interfaces\IsotopeAttribute;
 use Isotope\Interfaces\IsotopeProduct;
 use Isotope\Interfaces\IsotopeProductCollection;
+use Isotope\Model\Attribute;
 use Isotope\Model\Gallery;
 use Isotope\Model\Product;
 use Isotope\Model\ProductPrice;
@@ -426,7 +427,13 @@ class Standard extends Product implements IsotopeProduct
     public function getCategories()
     {
         if (null === $this->arrCategories) {
-            $this->arrCategories = \Database::getInstance()->execute("SELECT page_id FROM tl_iso_product_categories WHERE pid=" . ($this->pid ?: $this->id) . " ORDER BY sorting")->fetchEach('page_id');
+            $this->arrCategories = \Database::getInstance()->execute("SELECT page_id FROM tl_iso_product_categories WHERE pid=" . ($this->pid ?: $this->id))->fetchEach('page_id');
+
+            // Sort categories by the backend drag&drop
+            $arrOrder = deserialize($this->orderPages);
+            if (!empty($arrOrder) && is_array($arrOrder)) {
+                $this->arrCategories = array_unique(array_merge(array_intersect($arrOrder, $this->arrCategories), $this->arrCategories));
+            }
         }
 
         return $this->arrCategories;
@@ -483,13 +490,13 @@ class Standard extends Product implements IsotopeProduct
         };
 
         $objTemplate->generatePrice = function() use ($objProduct) {
-            $objPrice = $this->getPrice();
+            $objPrice = $objProduct->getPrice();
 
             if (null === $objPrice) {
                 return '';
             }
 
-            return $objPrice->generate(($this->pid == 0));
+            return $objPrice->generate(($objProduct->pid == 0));
         };
 
         $objTemplate->getGallery = function($strAttribute) use ($objProduct, $arrConfig, &$arrGalleries) {
@@ -772,7 +779,7 @@ class Standard extends Product implements IsotopeProduct
 
         $arrOptions = array();
 
-        foreach (array_intersect($this->getVariantAttributes(), $GLOBALS['ISO_CONFIG']['variant_options']) as $attribute) {
+        foreach (array_intersect($this->getVariantAttributes(), Attribute::getVariantOptionFields()) as $attribute) {
 
             $objAttribute = $GLOBALS['TL_DCA']['tl_iso_products']['attributes'][$attribute];
             $arrValues = $objAttribute->getOptionsForVariants($this->getVariantIds(), $arrOptions);
@@ -870,34 +877,30 @@ class Standard extends Product implements IsotopeProduct
 
             $this->arrData[$attribute] = $arrData[$attribute];
 
-            if (in_array($attribute, $GLOBALS['ISO_CONFIG']['fetch_fallback'])) {
+            if (in_array($attribute, Attribute::getFetchFallbackFields())) {
                 $this->arrData[$attribute.'_fallback'] = $arrData[$attribute.'_fallback'];
             }
         }
 
         // Load variant options
-        $this->arrOptions = array_merge($this->arrOptions, array_intersect_key($arrData, array_flip(array_intersect($this->getVariantAttributes(), $GLOBALS['ISO_CONFIG']['variant_options']))));
+        $this->arrOptions = array_merge($this->arrOptions, array_intersect_key($arrData, array_flip(array_intersect($this->getVariantAttributes(), Attribute::getVariantOptionFields()))));
     }
 
     /**
      * Generate url
-     * @param   PageModel|int   A PageModel instance or a page id
+     * @param   PageModel       A PageModel instance
      * @param   string          Optional parameters
      * @return  array
      */
-    public function generateUrl($objPage, $arrParams=array())
+    public function generateUrl(\PageModel $objJumpTo=null, $arrParams=array())
     {
-        if (!$objPage) {
-            return '';
+        if (null === $objJumpTo) {
+            global $objPage;
+            global $objIsotopeListPage;
+
+            $objJumpTo = $objIsotopeListPage ?: $objPage;
         }
 
-        if (is_numeric($objPage)) {
-            $objPage = \PageModel::findByPk($objPage);
-        }
-
-        if (null === $objPage) {
-            return '';
-        }
 
         $strUrlParam = Isotope::getConfig()->getUrlParam('product');
         $strUrl = '/' . ($strUrlParam ? $strUrlParam.'/' : '');
@@ -910,7 +913,7 @@ class Standard extends Product implements IsotopeProduct
 
         return \Isotope\Frontend::addQueryStringToUrl(
             http_build_query($arrParams),
-            \Controller::generateFrontendUrl($objPage->row(), $strUrl, $objPage->language)
+            \Controller::generateFrontendUrl($objJumpTo->row(), $strUrl, $objJumpTo->language)
         );
     }
 

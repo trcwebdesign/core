@@ -13,6 +13,7 @@
 namespace Isotope\Model;
 
 use Isotope\Isotope;
+use Isotope\Model\Attribute;
 
 
 /**
@@ -41,6 +42,23 @@ abstract class Product extends TypeAgent
      * @var array
      */
     protected static $arrModelTypes = array();
+
+    /**
+     * Find all published products
+     * @param   array
+     * @return  \Collection
+     */
+    public static function findPublished(array $arrOptions=array())
+    {
+        $t = static::$strTable;
+
+        if (BE_USER_LOGGED_IN !== true) {
+            $time = time();
+            $arrColumns[] = "$t.published='1' AND ($t.start='' OR $t.start<$time) AND ($t.stop='' OR $t.stop>$time)";
+        }
+
+        return static::findBy($arrColumns, array(), $arrOptions);
+    }
 
     /**
      * Find published products by condition
@@ -226,12 +244,12 @@ abstract class Product extends TypeAgent
         $arrJoins = array();
         $arrFields = array($arrOptions['table'] . ".*", "'". str_replace('-', '_', $GLOBALS['TL_LANGUAGE']) . "' AS language");
 
-        foreach ($GLOBALS['ISO_CONFIG']['multilingual'] as $attribute)
+        foreach (Attribute::getMultilingualFields() as $attribute)
         {
             $arrFields[] = "IFNULL(translation.$attribute, " . $arrOptions['table'] . ".$attribute) AS $attribute";
         }
 
-        foreach ($GLOBALS['ISO_CONFIG']['fetch_fallback'] as $attribute)
+        foreach (Attribute::getFetchFallbackFields() as $attribute)
         {
             $arrFields[] = "{$arrOptions['table']}.$attribute AS {$attribute}_fallback";
         }

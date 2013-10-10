@@ -418,4 +418,199 @@ abstract class Attribute extends TypeAgent
 
         return $strBuffer;
     }
+
+    /**
+     * Get list of system columns
+     * @return  array
+     */
+    public static function getSystemColumnsFields()
+    {
+        static $arrFields;
+
+        Isotope::getInstance()->call('loadDataContainer', 'tl_iso_products');
+
+        if (null === $arrFields) {
+            $arrFields = array();
+            $arrDCA = &$GLOBALS['TL_DCA']['tl_iso_products']['fields'];
+
+            foreach ($arrDCA as $field => $config) {
+                if ($config['attributes']['systemColumn']) {
+                    $arrFields[] = $field;
+                }
+            }
+        }
+
+        return $arrFields;
+    }
+
+    /**
+     * Return list of variant option fields
+     * @return  array
+     */
+    public static function getVariantOptionFields()
+    {
+        static $arrFields;
+
+        Isotope::getInstance()->call('loadDataContainer', 'tl_iso_products');
+
+        if (null === $arrFields) {
+            $arrFields = array();
+            $arrDCA = &$GLOBALS['TL_DCA']['tl_iso_products']['fields'];
+
+            foreach ($arrDCA as $field => $config) {
+                if ($config['attributes']['variant_option']) {
+                    $arrFields[] = $field;
+                }
+            }
+        }
+
+        return $arrFields;
+    }
+
+    /**
+     * Return list of fields that are customer defined
+     * @return  array
+     */
+    public static function getCustomerDefinedFields()
+    {
+        static $arrFields;
+
+        Isotope::getInstance()->call('loadDataContainer', 'tl_iso_products');
+
+        if (null === $arrFields) {
+            $arrFields = array();
+            $arrDCA = &$GLOBALS['TL_DCA']['tl_iso_products']['fields'];
+
+            foreach ($arrDCA as $field => $config) {
+                if ($config['attributes']['customer_defined']) {
+                    $arrFields[] = $field;
+                }
+            }
+        }
+
+        return $arrFields;
+    }
+
+    /**
+     * Return list of fields that are multilingual
+     * @return  array
+     */
+    public static function getMultilingualFields()
+    {
+        static $arrFields;
+
+        Isotope::getInstance()->call('loadDataContainer', 'tl_iso_products');
+
+        if (null === $arrFields) {
+            $arrFields = array();
+            $arrDCA = &$GLOBALS['TL_DCA']['tl_iso_products']['fields'];
+
+            foreach ($arrDCA as $field => $config) {
+                if ($config['attributes']['multilingual']) {
+                    $arrFields[] = $field;
+                }
+            }
+        }
+
+        return $arrFields;
+    }
+
+    /**
+     * Return list of fields that have fetch_fallback set
+     * @return  array
+     */
+    public static function getFetchFallbackFields()
+    {
+        static $arrFields;
+
+        Isotope::getInstance()->call('loadDataContainer', 'tl_iso_products');
+
+        if (null === $arrFields) {
+            $arrFields = array();
+            $arrDCA = &$GLOBALS['TL_DCA']['tl_iso_products']['fields'];
+
+            foreach ($arrDCA as $field => $config) {
+                if ($config['attributes']['fetch_fallback']) {
+                    $arrFields[] = $field;
+                }
+            }
+        }
+
+        return $arrFields;
+    }
+
+    /**
+     * Return list of dynamic fields
+     * Dynamic fields cannot be filtered on database level (e.g. product price)
+     * @return  array
+     */
+    public static function getDynamicAttributeFields()
+    {
+        static $arrFields;
+
+        Isotope::getInstance()->call('loadDataContainer', 'tl_iso_products');
+
+        if (null === $arrFields) {
+            $arrFields = array();
+            $arrDCA = &$GLOBALS['TL_DCA']['tl_iso_products']['fields'];
+
+            foreach ($arrDCA as $field => $config) {
+                if ($config['attributes']['dynamic'] || $config['eval']['multiple']) {
+                    $arrFields[] = $field;
+                }
+            }
+        }
+
+        return $arrFields;
+    }
+
+    /**
+     * Return list of fixed fields
+     * Fixed fields cannot be disabled in product type config
+     * @return  array
+     */
+    public static function getFixedFields()
+    {
+        static $arrFields;
+
+        Isotope::getInstance()->call('loadDataContainer', 'tl_iso_products');
+
+        if (null === $arrFields) {
+            $arrFields = array();
+            $arrDCA = &$GLOBALS['TL_DCA']['tl_iso_products']['fields'];
+
+            foreach ($arrDCA as $field => $config) {
+                if ($config['attributes']['fixed']) {
+                    $arrFields[] = $field;
+                }
+            }
+        }
+
+        return $arrFields;
+    }
+
+    /**
+     * Return list of fixed fields
+     * Fixed fields cannot be disabled in product type config
+     * @return  array
+     */
+    public static function getVariantFixedFields()
+    {
+        static $arrFields;
+
+        Isotope::getInstance()->call('loadDataContainer', 'tl_iso_products');
+
+        if (null === $arrFields) {
+            $arrFields = array();
+            $arrDCA = &$GLOBALS['TL_DCA']['tl_iso_products']['fields'];
+
+            foreach ($arrDCA as $field => $config) {
+                if ($config['attributes']['variant_fixed']) {
+                    $arrFields[] = $field;
+                }
+            }
+        }
+
+        return $arrFields;
+    }
 }

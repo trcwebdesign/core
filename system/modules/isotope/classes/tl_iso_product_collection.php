@@ -75,7 +75,7 @@ class tl_iso_product_collection extends \Backend
             \Controller::redirect('contao/main.php?act=error');
         }
 
-        $GLOBALS['TL_CSS'][] = 'system/modules/isotope/assets/print.min.css|print';
+        $GLOBALS['TL_CSS'][] = 'system/modules/isotope/assets/print' . (ISO_DEBUG ? '' : '.min') . '.css|print';
 
         // Generate a regular order details module
         \Input::setGet('uid', $objOrder->uniqid);
@@ -150,7 +150,9 @@ class tl_iso_product_collection extends \Backend
      */
     public function generateBillingAddressData($dc, $xlabel)
     {
-        return $this->generateAddressData(Order::findByPk($dc->id)->getBillingAddress());
+        $objOrder = Order::findByPk($dc->id);
+
+        return $this->generateAddressData((null === $objOrder) ? null : $objOrder->getBillingAddress());
     }
 
 
@@ -162,7 +164,9 @@ class tl_iso_product_collection extends \Backend
      */
     public function generateShippingAddressData($dc, $xlabel)
     {
-        return $this->generateAddressData(Order::findByPk($dc->id)->getShippingAddress());
+        $objOrder = Order::findByPk($dc->id);
+
+        return $this->generateAddressData((null === $objOrder) ? null : $objOrder->getShippingAddress());
     }
 
 
@@ -257,6 +261,20 @@ class tl_iso_product_collection extends \Backend
         }
     }
 
+	/**
+	 * Return the paymnet button if a payment method is available
+	 * @param array
+	 * @param string
+	 * @param string
+	 * @param string
+	 * @param string
+	 * @param string
+	 * @return string
+	 */
+	public function paymentButton($row, $href, $label, $title, $icon, $attributes)
+	{
+		return $row['payment_id'] > 0 ? '<a href="'.$this->addToUrl($href.'&amp;id='.$row['id']).'" title="'.specialchars($title).'"'.$attributes.'>'.$this->generateImage($icon, $label).'</a> ' : '';
+	}
 
     /**
      * Generate a payment interface and return it as HTML string
@@ -265,15 +283,33 @@ class tl_iso_product_collection extends \Backend
      */
     public function paymentInterface($dc)
     {
-        try {
-            $objPayment = Order::findByPk($dc->id)->getRelated('payment_id');
+        $objOrder = Order::findByPk($dc->id);
 
-            return $objPayment->backendInterface($dc->id);
-        } catch (\Exception $e) {
-            return '<p class="tl_gerror">'.$GLOBALS['TL_LANG']['MSC']['backendPaymentNotFound'].'</p>';
+        if (null !== $objOrder) {
+            $objPayment = $objOrder->getRelated('payment_id');
+
+            if (null !== $objPayment) {
+                return $objPayment->backendInterface($dc->id);
+            }
         }
+
+        return '<p class="tl_gerror">'.$GLOBALS['TL_LANG']['MSC']['backendPaymentNotFound'].'</p>';
     }
 
+    /**
+	 * Return the shipping button if a shipping method is available
+	 * @param array
+	 * @param string
+	 * @param string
+	 * @param string
+	 * @param string
+	 * @param string
+	 * @return string
+	 */
+	public function shippingButton($row, $href, $label, $title, $icon, $attributes)
+	{
+		return $row['shipping_id'] > 0 ? '<a href="'.$this->addToUrl($href.'&amp;id='.$row['id']).'" title="'.specialchars($title).'"'.$attributes.'>'.$this->generateImage($icon, $label).'</a> ' : '';
+	}
 
     /**
      * Generate a shipping interface and return it as HTML string
@@ -282,13 +318,17 @@ class tl_iso_product_collection extends \Backend
      */
     public function shippingInterface($dc)
     {
-        try {
-            $objShipping = Order::findByPk($dc->id)->getRelated('shipping_id');
+        $objOrder = Order::findByPk($dc->id);
 
-            return $objShipping->backendInterface($dc->id);
-        } catch (\Exception $e) {
-            return '<p class="tl_gerror">'.$GLOBALS['TL_LANG']['MSC']['backendShippingNotFound'].'</p>';
+        if (null !== $objOrder) {
+            $objShipping = $objOrder->getRelated('shipping_id');
+
+            if (null !== $objShipping) {
+                return $objShipping->backendInterface($dc->id);
+            }
         }
+
+        return '<p class="tl_gerror">'.$GLOBALS['TL_LANG']['MSC']['backendShippingNotFound'].'</p>';
     }
 
 

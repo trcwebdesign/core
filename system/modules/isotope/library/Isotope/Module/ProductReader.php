@@ -70,6 +70,7 @@ class ProductReader extends Module
     protected function compile()
     {
         global $objPage;
+        global $objIsotopeListPage;
 
         $objProduct = \Isotope\Frontend::getProductByAlias(\Isotope\Frontend::getAutoItem('product'));
 
@@ -89,10 +90,10 @@ class ProductReader extends Module
         $arrConfig = array(
             'module'        => $this,
             'template'      => ($this->iso_reader_layout ?: $objProduct->getRelated('type')->reader_template),
-            'gallery'       => $objProduct->getRelated('type')->reader_gallery,
+            'gallery'       => ($this->iso_gallery ?: $objProduct->getRelated('type')->reader_gallery),
             'buttons'       => deserialize($this->iso_buttons, true),
             'useQuantity'   => $this->iso_use_quantity,
-            'jumpTo'        => $objPage->id,
+            'jumpTo'        => ($objIsotopeListPage ?: $objPage),
         );
 
         if (\Environment::get('isAjaxRequest') && \Input::post('AJAX_MODULE') == $this->id && \Input::post('AJAX_PRODUCT') == $objProduct->id) {
@@ -109,5 +110,7 @@ class ProductReader extends Module
         $objPage->description = $this->prepareMetaDescription($objProduct->description_meta);
 
         $GLOBALS['TL_KEYWORDS'] .= (strlen($GLOBALS['TL_KEYWORDS']) ? ', ' : '') . $objProduct->keywords_meta;
+
+        // @todo add canonical links to all categories of current root into TL_HEAD
     }
 }
