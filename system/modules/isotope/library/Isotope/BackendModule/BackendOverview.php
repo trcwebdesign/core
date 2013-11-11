@@ -48,6 +48,8 @@ abstract class BackendOverview extends \BackendModule
     public function generate()
     {
         $this->arrModules = array();
+        $objClassGenerator = \Haste\Generator\RowClass::withKey('class')->addArrayKey()->addFirstLast()->addCount('col_');
+        $row = 0;
 
         // enable collapsing legends
         $session = \Session::getInstance()->get('fieldset_states');
@@ -58,6 +60,10 @@ abstract class BackendOverview extends \BackendModule
                 $arrGroup['collapse'] = !$session['iso_be_overview_legend'][$k];
             } elseif ($hide == 'hide') {
                 $arrGroup['collapse'] = true;
+            }
+
+            if (is_array($arrGroup['modules'])) {
+                $objClassGenerator->addCustom('row_'.$row++)->applyTo($arrGroup['modules']);
             }
 
             $this->arrModules[$k] = $arrGroup;

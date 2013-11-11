@@ -3,13 +3,13 @@
 <?php endif; ?>
 <div class="tl_formbody_edit be_iso_overview">
     <?php foreach ($this->modules as $strGroupKey => $arrGroup): ?>
-    <fieldset id="pal_<?php echo $strGroupKey; ?>" class="tl_box<?php if($arrGroup['collapse']): ?> collapsed<?php endif; ?>">
+    <fieldset id="pal_<?php echo $strGroupKey; ?>" class="tl_box<?php if($arrGroup['collapse']): ?> collapsed<?php endif; ?> after<?php echo (int) $last; $last = count($arrGroup['modules']); ?>">
         <legend onclick="AjaxRequest.toggleFieldset(this,'<?php echo $strGroupKey; ?>','iso_be_overview_legend')"><?php echo $arrGroup['label']; ?></legend>
         <?php if ($arrGroup['html']): ?>
         <?php echo $arrGroup['html']; ?>
         <?php else: ?>
         <?php foreach ($arrGroup['modules'] as $strModule => $arrModule): ?>
-        <div class="item">
+        <div class="item <?php echo $arrModule['class']; ?>">
             <a href="<?php echo $arrModule['href']; ?>" title="<?php echo $arrModule['description']; ?>"<?php if ($arrModule['class']): ?> class="<?php echo $arrModule['class']; ?>"<?php endif; ?>>
                 <img src="<?php echo $arrModule['icon']; ?>" alt="">
                 <span><?php echo $arrModule['label']; ?></span>
