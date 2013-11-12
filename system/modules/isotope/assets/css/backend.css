@@ -374,6 +374,7 @@ body.iso_be_overview .tip-wrap{
 
 
 /* Info arrows in shop config */
+/*
 .be_iso_overview .item.last:after {
     position: absolute;
     right: -15px;
@@ -383,20 +384,22 @@ body.iso_be_overview .tip-wrap{
     background: url("../images/setup-arrow.png") 0 0 repeat;
     content: "";
 }
+*/
 .be_iso_overview .item:before {
     position: absolute;
-    left: -20px;
-    top: 35px;
-    width: 40px;
-    height: 10px;
-    background: #dceff3;
+    left: -15px;
+    top: 22px;
+    width: 30px;
+    height: 33px;
+/*     background: #dceff3; */
+    background: url("../images/setup-arrow.png") 0 0 repeat;
     content: "";
 }
 .be_iso_overview .item.first:before {
-    top: -40px;
+    top: -20px;
     left: 53px;
-    width: 585px;
-    height: 30px;
+    width: 592px;
+    height: 10px;
     border: 10px solid #dceff3;
     border-right: 0;
     border-bottom: 0;
@@ -407,7 +410,7 @@ body.iso_be_overview .tip-wrap{
     top: -115px;
     right: -540px;
     width: 40px;
-    height: 75px;
+    height: 85px;
     border: 10px solid #dceff3;
     border-left: 0;
     border-bottom: 0;
@@ -415,10 +418,10 @@ body.iso_be_overview .tip-wrap{
     content: "";
 }
 .be_iso_overview .after4 .item.first:after {
-    width: 160px;
+    width: 200px;
 }
 .be_iso_overview .after5 .item.first:after {
-    width: 70px;
+    width: 85px;
 }
 .be_iso_overview .item.row_0.first:before,
 .be_iso_overview .item.row_0.first:after {
