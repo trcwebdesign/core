@@ -376,10 +376,10 @@ body.iso_be_overview .tip-wrap{
 /* Info arrows in shop config */
 .be_iso_overview .item.last:after {
     position: absolute;
-    right: 0;
-    top: 28px;
-    height: 24px;
-    width: 12px;
+    right: -15px;
+    top: 24px;
+    height: 33px;
+    width: 30px;
     background: url("../images/setup-arrow.png") 0 0 repeat;
     content: "";
 }
@@ -389,7 +389,7 @@ body.iso_be_overview .tip-wrap{
     top: 35px;
     width: 40px;
     height: 10px;
-    background: #f60;
+    background: #dceff3;
     content: "";
 }
 .be_iso_overview .item.first:before {
@@ -397,7 +397,7 @@ body.iso_be_overview .tip-wrap{
     left: 53px;
     width: 585px;
     height: 30px;
-    border: 10px solid #f60;
+    border: 10px solid #dceff3;
     border-right: 0;
     border-bottom: 0;
     background: none;
@@ -408,14 +408,14 @@ body.iso_be_overview .tip-wrap{
     right: -540px;
     width: 40px;
     height: 75px;
-    border: 10px solid #f60;
+    border: 10px solid #dceff3;
     border-left: 0;
     border-bottom: 0;
     background: none;
     content: "";
 }
 .be_iso_overview .after4 .item.first:after {
-    width: 185px;
+    width: 160px;
 }
 .be_iso_overview .after5 .item.first:after {
     width: 70px;
