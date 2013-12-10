@@ -123,7 +123,7 @@ class Order extends ProductCollection implements IsotopeProductCollection
      * Process the order checkout
      * @return boolean
      */
-    public function checkout()
+    public function checkout(OrderStatus $objStatus = null, \DateTime $paid = null, \DateTime $shipped = null)
     {
         if ($this->checkout_complete) {
             return true;
@@ -170,9 +170,15 @@ class Order extends ProductCollection implements IsotopeProductCollection
             $objDownload->save();
         }
 
+        // Set order status from config if none is given
+        if (null === $objStatus) {
+            $objStatus = $this->getRelated('config_id')->getRelated('orderstatus_new');
+        }
+
         // Finish and lock the order (do this now, because otherwise surcharges etc. will not be loaded form the database)
         $this->checkout_complete = true;
         $this->generateDocumentNumber($this->getRelated('config_id')->orderPrefix, (int) $this->getRelated('config_id')->orderDigits);
+        $this->updateOrderStatus($objStatus, $paid, $shipped);
         $this->lock();
         \System::log('New order ID ' . $this->id . ' has been placed', __METHOD__, TL_ACCESS);
 
@@ -210,11 +216,6 @@ class Order extends ProductCollection implements IsotopeProductCollection
             }
         } else {
             \System::log('No notification for order ID ' . $this->id, __METHOD__, TL_ERROR);
-        }
-
-        // Set order status only if a payment module has not already set it
-        if ($this->order_status == 0) {
-            $this->updateOrderStatus($this->getRelated('config_id')->orderstatus_new);
         }
 
         // !HOOK: post-process checkout
