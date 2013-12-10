@@ -252,21 +252,16 @@ class Order extends ProductCollection implements IsotopeProductCollection
 
     /**
      * Update the status of this order and trigger actions (email & hook)
-     * @param int
-     * @param bool
+     * @param   OrderStatus
+     * @param   \DateTime
+     * @param   \DateTime
      * @return bool
      */
-    public function updateOrderStatus($intNewStatus)
+    public function updateOrderStatus(OrderStatus $objNewStatus, \DateTime $paid = null, \DateTime $shipped = null)
     {
         // Status already set, nothing to do
-        if ($this->order_status == $intNewStatus) {
+        if ($this->order_status == $objNewStatus->id) {
             return true;
-        }
-
-        $objNewStatus = OrderStatus::findByPk($intNewStatus);
-
-        if (null === $objNewStatus) {
-            return false;
         }
 
         // !HOOK: allow to cancel a status update
@@ -283,9 +278,24 @@ class Order extends ProductCollection implements IsotopeProductCollection
         }
 
         // Add the payment date if there is none
-        if ($objNewStatus->isPaid() && $this->date_paid == '') {
-            $this->date_paid = time();
+        if ($objNewStatus->isPaid() && null === $paid) {
+            $paid = new \DateTime();
         }
+
+        // Store old status for notification tokens
+        $objOldStatus       = $this->getRelated('order_status');
+
+        $this->order_status = $objNewStatus->id;
+
+        if (null !== $paid && $this->date_paid == '') {
+            $this->date_paid = $paid->getTimestamp();
+        }
+
+        if (null !== $shipped && $this->date_shipped == '') {
+            $this->date_shipped = $shipped->getTimestamp();
+        }
+
+        $this->save();
 
         // Trigger notification
         $blnNotificationError = null;
@@ -296,8 +306,14 @@ class Order extends ProductCollection implements IsotopeProductCollection
             // Override order status and save the old one to the tokens too
             $arrTokens['order_status_id']       = $objNewStatus->id;
             $arrTokens['order_status']          = $objNewStatus->getName();
-            $arrTokens['order_status_old']      = $this->getStatusLabel();
-            $arrTokens['order_status_id_old']   = $this->order_status;
+            $arrTokens['order_status_old']      = '';
+            $arrTokens['order_status_id_old']   = '';
+
+
+            if (null !== $objOldStatus) {
+                $arrTokens['order_status_old']      = $objOldStatus->getName();
+                $arrTokens['order_status_id_old']   = $objOldStatus->id;
+            }
 
             $blnNotificationError = true;
 
@@ -325,11 +341,6 @@ class Order extends ProductCollection implements IsotopeProductCollection
                 \Message::addConfirmation($GLOBALS['TL_LANG']['tl_iso_product_collection']['orderStatusNotificationSuccess']);
             }
         }
-
-        // Store old status and set the new one
-        $intOldStatus       = $this->order_status;
-        $this->order_status = $objNewStatus->id;
-        $this->save();
 
         // !HOOK: order status has been updated
         if (isset($GLOBALS['ISO_HOOKS']['postOrderStatusUpdate']) && is_array($GLOBALS['ISO_HOOKS']['postOrderStatusUpdate'])) {
