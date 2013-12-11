@@ -36,8 +36,6 @@ class Cash extends Payment implements IsotopePayment
      */
     public function processPayment(IsotopeProductCollection $objOrder, \Module $objModule)
     {
-        $objOrder->updateOrderStatus($this->new_order_status);
-
-        return true;
+        return $objOrder->checkout($this->getRelated('new_order_status'));
     }
 }

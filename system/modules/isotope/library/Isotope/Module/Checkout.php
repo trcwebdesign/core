@@ -134,7 +134,7 @@ class Checkout extends Module
             // true means the payment is successful and order should be completed
             if ($strBuffer === true) {
                 // If checkout is successful, complete order and redirect to confirmation page
-                if ($objOrder->checkout() && $objOrder->complete()) {
+                if ($objOrder->complete()) {
                     \Controller::redirect(\Haste\Util\Url::addQueryString('uid=' . $objOrder->uniqid, $this->orderCompleteJumpTo));
                 }
 

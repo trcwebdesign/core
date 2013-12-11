@@ -37,12 +37,17 @@ class Expercash extends Payment implements IsotopePayment, IsotopePostsale
      */
     public function processPayment(IsotopeProductCollection $objOrder, \Module $objModule)
     {
-        // @todo this can't be the only validation
-        if ($this->validateUrlParams($objOrder)) {
-            return true;
+        if (!$this->validateUrlParams($objOrder)) {
+            \System::log('ExperCash: data rejected', __METHOD__, TL_GENERAL);
         }
 
-        return false;
+        if (!$objOrder->checkout($this->getRelated('new_order_status'), new \DateTime())) {
+            \System::log('Checkout for Order ID "' . $objOrder->id . '" failed', __METHOD__, TL_ERROR);
+
+            return false;
+        }
+
+        return true;
     }
 
 
