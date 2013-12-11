@@ -44,63 +44,44 @@ class Paypal extends Postsale implements IsotopePayment
         if ($objRequest->hasError()) {
             \System::log('Request Error: ' . $objRequest->error, __METHOD__, TL_ERROR);
             exit;
+
         } elseif ($objRequest->response == 'VERIFIED' && (\Input::post('receiver_email', true) == $this->paypal_account || $this->debug)) {
+
             // Validate payment data (see #2221)
             if ($objOrder->currency != \Input::post('mc_currency') || $objOrder->getTotal() != \Input::post('mc_gross')) {
                 \System::log('IPN manipulation in payment from "' . \Input::post('payer_email') . '" !', __METHOD__, TL_ERROR);
-
                 return;
             }
-
-            if (!$objOrder->checkout()) {
-                \System::log('IPN checkout for Order ID "' . \Input::post('invoice') . '" failed', __METHOD__, TL_ERROR);
-
-                return;
-            }
-
-            // Load / initialize data
-            $arrPayment = deserialize($objOrder->payment_data, true);
 
             // Store request data in order for future references
+            $arrPayment = deserialize($objOrder->payment_data, true);
             $arrPayment['POSTSALE'][] = $_POST;
+            $objOrder->payment_data = $arrPayment;
+            $objOrder->save();
 
+            // @see https://www.paypalobjects.com/webstatic/en_US/developer/docs/pdf/ipnguide.pdf
+            switch (\Input::post('payment_status')) {
 
-            $arrData                       = $objOrder->getData();
-            $arrData['old_payment_status'] = $arrPayment['status'];
-
-            $arrPayment['status']          = \Input::post('payment_status');
-            $arrData['new_payment_status'] = $arrPayment['status'];
-
-            // array('pending','processing','complete','on_hold', 'cancelled'),
-            switch ($arrPayment['status']) {
-                case 'Completed':
-                    $objOrder->date_paid = time();
-                    $objOrder->updateOrderStatus($this->new_order_status);
+                case 'Created': // A German ELV payment is made using Express Checkout.
+                case 'Pending': // The payment is pending. See pending_reason for more information.
+                case 'Processed': // A payment has been accepted.
+                case 'Completed': // The payment has been completed, and the funds have been added successfully to your account balance.
+                    $objOrder->checkout($this->getRelated('new_order_status'), new \DateTime());
                     break;
 
-                case 'Canceled_Reversal':
-                case 'Denied':
-                case 'Expired':
-                case 'Failed':
-                case 'Voided':
+                case 'Canceled_Reversal': // A reversal has been canceled. For example, you won a dispute with the customer, and the funds for the transaction that was reversed have been returned to you.
+                case 'Denied': // You denied the payment. This happens only if the payment was previously pending because of possible reasons described for the pending_reason variable or the Fraud_Management_Filters_x variable.
+                case 'Expired': // This authorization has expired and cannot be captured.
+                case 'Failed': // The payment has failed. This happens only if the payment was made from your customer’s bank account.
+                case 'Voided': // This authorization has been voided.
                     // PayPal will also send this notification if the order has not been placed.
                     // What do we do here?
-//                    $objOrder->date_paid = '';
-//                    $objOrder->updateOrderStatus(Isotope::getConfig()->orderstatus_error);
                     break;
 
-                case 'In-Progress':
-                case 'Partially_Refunded':
-                case 'Pending':
-                case 'Processed':
-                case 'Refunded':
-                case 'Reversed':
+                case 'Refunded': // You refunded the payment.
+                case 'Reversed': // A payment was reversed due to a chargeback or other type of reversal. The funds have been removed from your account balance and returned to the buyer. The reason for the reversal is specified in the ReasonCode element.
                     break;
             }
-
-            $objOrder->payment_data = $arrPayment;
-
-            $objOrder->save();
 
             \System::log('PayPal IPN: data accepted', __METHOD__, TL_GENERAL);
         } else {
