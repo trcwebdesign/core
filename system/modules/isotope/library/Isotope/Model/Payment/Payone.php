@@ -45,15 +45,10 @@ class Payone extends Postsale implements IsotopePayment
             die('TSOK');
         }
 
-        if (!$objOrder->checkout()) {
+        if (!$objOrder->checkout($this->getRelated('new_order_status'), new \DateTime())) {
             \System::log('Postsale checkout for Order ID "' . \Input::post('invoice') . '" failed', __METHOD__, TL_ERROR);
             die('TSOK');
         }
-
-        $objOrder->date_paid = time();
-        $objOrder->updateOrderStatus($this->new_order_status);
-
-        $objOrder->save();
 
         // PayOne must get TSOK as return value, otherwise the request will be sent again
         die('TSOK');

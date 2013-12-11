@@ -62,16 +62,11 @@ class Expercash extends Payment implements IsotopePayment, IsotopePostsale
             \System::log('ExperCash: data rejected' . print_r($_POST, true), __METHOD__, TL_GENERAL);
         }
 
-        if (!$objOrder->checkout()) {
+        if (!$objOrder->checkout($this->getRelated('new_order_status'), new \DateTime())) {
             \System::log('Postsale checkout for Order ID "' . $objOrder->id . '" failed', __METHOD__, TL_ERROR);
 
             return;
         }
-
-        $objOrder->date_paid = time();
-        $objOrder->updateOrderStatus($this->new_order_status);
-
-        $objOrder->save();
 
         // 200 OK
         $objResponse = new Response();

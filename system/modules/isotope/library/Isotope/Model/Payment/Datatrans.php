@@ -58,16 +58,11 @@ class Datatrans extends Postsale implements IsotopePayment
             return false;
         }
 
-        if (!$objOrder->checkout()) {
+        if (!$objOrder->checkout($this->getRelated('new_order_status'), new \DateTime())) {
             \System::log('Postsale checkout for Order ID "' . \Input::post('refno') . '" failed', __METHOD__, TL_ERROR);
 
             return false;
         }
-
-        $objOrder->date_paid = time();
-        $objOrder->updateOrderStatus($this->new_order_status);
-
-        $objOrder->save();
     }
 
     /**

@@ -16,6 +16,7 @@ use Haste\Util\Format;
 use Isotope\Isotope;
 use Isotope\Model\Address;
 use Isotope\Model\Document;
+use Isotope\Model\OrderStatus;
 use Isotope\Model\ProductCollection\Order;
 
 
@@ -392,11 +393,13 @@ class Callback extends \Backend
     public function updateOrderStatus($varValue, $dc)
     {
         if ($dc->activeRecord && $dc->activeRecord->status != $varValue) {
-            if (($objOrder = Order::findByPk($dc->id)) !== null) {
-                // Status update has been cancelled, do not update
-                if (!$objOrder->updateOrderStatus($varValue)) {
-                    return $dc->activeRecord->order_status;
-                }
+
+            $objOrder = Order::findByPk($dc->id);
+            $objStatus = OrderStatus::findByPk($varValue);
+
+            // Status update has been cancelled, do not update
+            if (null === $objOrder || null === $objStatus || !$objOrder->updateOrderStatus($objStatus)) {
+                return $dc->activeRecord->order_status;
             }
         }
 
