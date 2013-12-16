@@ -8,6 +8,8 @@
 !.tx/source/en
 !README.md
 !composer.json
+!Gruntfile.js
+!package.json
 
 # Isotope ignoring rules
 !isotope/
