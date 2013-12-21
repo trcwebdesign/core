@@ -124,7 +124,14 @@ var IsotopeProducts = (function() {
     }
 
     function registerEvents(form, config) {
-        var i, el;
+        var i, el, xhr;
+
+console.log(form, getFormAsQueryString(form));
+
+        form.addEventListener('submit', function() {
+
+        }, false);
+
 
         document.id(form).set('send', {
             url: window.location.href,
@@ -162,6 +169,34 @@ var IsotopeProducts = (function() {
                 }
             }
         }
+    }
+
+    function getFormAsQueryString(form) {
+        var el, type, value, options, i, o;
+        var queryString = [];
+        var elements = form.querySelectorAll('input, select, textarea');
+
+        for(i=0; i<elements.length; i++) {
+            el = elements[i];
+            type = el.type;
+
+            if (!el.name || el.disabled || type == 'submit' || type == 'reset' || type == 'file' || type == 'image') {
+                continue;
+            }
+
+            if (el.tagName == 'select') {
+                options = el.getElementsByTagName('option');
+                for (o=0; o<options.length; o++) {
+                    if (options[o].selected && typeof options[o].value != 'undefined') {
+                        queryString.push(encodeURIComponent(el.name) + '=' + encodeURIComponent(options[o].value))
+                    }
+                }
+            } else if (((type != 'radio' && type != 'checkbox') || el.checked) && typeof el.value != 'undefined') {
+                queryString.push(encodeURIComponent(el.name) + '=' + encodeURIComponent(el.value))
+            }
+        }
+
+        return queryString.join('&');
     }
 
     return {
