@@ -278,8 +278,17 @@ class DC_ProductData extends \DC_Table
             $cctable[$v] = $GLOBALS['TL_DCA'][$v]['config']['ctable'];
 
             if (!$GLOBALS['TL_DCA'][$v]['config']['doNotCopyRecords'] && strlen($v)) {
-                $objCTable = $this->Database->prepare("SELECT * FROM " . $v . " WHERE pid=?" . ($this->Database->fieldExists('sorting', $v) ? " ORDER BY sorting" : ""))
-                    ->execute($id);
+                // Consider the dynamic parent table (see #4867)
+                if ($GLOBALS['TL_DCA'][$v]['config']['dynamicPtable']) {
+                    $ptable = $GLOBALS['TL_DCA'][$v]['config']['ptable'];
+                    $cond = ($ptable == 'tl_article') ? "(ptable=? OR ptable='')" : "ptable=?"; // backwards compatibility
+
+                    $objCTable = $this->Database->prepare("SELECT * FROM $v WHERE pid=? AND $cond" . ($this->Database->fieldExists('sorting', $v) ? " ORDER BY sorting" : ""))
+                                                ->execute($id, $ptable);
+                } else {
+                    $objCTable = $this->Database->prepare("SELECT * FROM $v WHERE pid=?" . ($this->Database->fieldExists('sorting', $v) ? " ORDER BY sorting" : ""))
+                                                ->execute($id);
+                }
 
                 foreach ($objCTable->fetchAllAssoc() as $row) {
                     // Exclude the duplicated record itself
@@ -321,8 +330,8 @@ class DC_ProductData extends \DC_Table
             if (!empty($v)) {
                 foreach ($v as $kk => $vv) {
                     $objInsertStmt = $this->Database->prepare("INSERT INTO " . $k . " %s")
-                        ->set($vv)
-                        ->execute();
+                                                    ->set($vv)
+                                                    ->execute();
 
                     if ($objInsertStmt->affectedRows && (!empty($cctable[$k]) || $GLOBALS['TL_DCA'][$k]['list']['sorting']['mode'] == 5) && $kk != $parentId) {
                         $this->copyChilds($k, $objInsertStmt->insertId, $kk, $parentId);
