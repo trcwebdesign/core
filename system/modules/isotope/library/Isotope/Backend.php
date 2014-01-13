@@ -283,19 +283,32 @@ class Backend extends Contao_Backend
         switch ($action) {
             // Move the product
             case 'moveProduct':
-                \Session::getInstance()->set('iso_products_gid', intval(\Input::post('value')));
+                $arrProducts = \Isotope\Backend\Product\Permission::getAllowedIds();
+                if ($arrProducts !== true || $arrProducts === false || !in_array(\Input::get('id'), $arrProducts)) {
+                    header('HTTP/1.1 403 Forbidden');
+                    die('Forbidden');
+                }
+
+                $filter = \Session::getInstance()->get('filter');
+                $filter['tl_iso_product']['iso_group'] = (int) \Input::post('value');
+                \Session::getInstance()->set('filter', $filter);
+
                 \Controller::redirect(html_entity_decode(\Input::post('redirect')));
                 break;
 
             // Move multiple products
             case 'moveProducts':
-                \Session::getInstance()->set('iso_products_gid', intval(\Input::post('value')));
+                $filter = \Session::getInstance()->get('filter');
+                $filter['tl_iso_product']['iso_group'] = (int) \Input::post('value');
+                \Session::getInstance()->set('filter', $filter);
                 exit;
                 break;
 
             // Filter the groups
             case 'filterGroups':
-                \Session::getInstance()->set('iso_products_gid', intval(\Input::post('value')));
+                $filter = \Session::getInstance()->get('filter');
+                $filter['tl_iso_product']['iso_group'] = (int) \Input::post('value');
+                \Session::getInstance()->set('filter', $filter);
                 $this->reload();
                 break;
 

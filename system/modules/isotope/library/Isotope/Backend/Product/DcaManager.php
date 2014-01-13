@@ -60,8 +60,10 @@ class DcaManager extends \Backend
             return;
         }
 
+        $filter = \Session::getInstance()->get('filter');
+
         $intType  = 0;
-        $intGroup = (int) \Session::getInstance()->get('iso_products_gid') ? : (\BackendUser::getInstance()->isAdmin ? 0 : intval(\BackendUser::getInstance()->iso_groups[0]));
+        $intGroup = (int) $filter['tl_iso_product']['iso_group'] ? : (\BackendUser::getInstance()->isAdmin ? 0 : intval(\BackendUser::getInstance()->iso_groups[0]));
         $objGroup = Group::findByPk($intGroup);
 
         if (null === $objGroup || null === $objGroup->getRelated('product_type')) {
@@ -194,10 +196,27 @@ class DcaManager extends \Backend
      */
     public function addBreadcrumb()
     {
-        $strBreadcrumb = \Isotope\Backend\Group\Breadcrumb::generate($this->Session->get('iso_products_gid'));
-        $strBreadcrumb .= static::getPagesBreadcrumb();
+        if ($this->Input->get('act') == '' && !$this->Input->get('id')) {
+            $strBreadcrumb = \Isotope\Backend\Group\Breadcrumb::generate(
+                function() {
+                    $filter = \Session::getInstance()->get('filter');
+                    return (int) $filter['tl_iso_product']['iso_group'];
+                },
+                function($intNode) {
+                    $filter = \Session::getInstance()->get('filter');
+                    $filter['tl_iso_product']['iso_group'] = (int) $intNode;
+                    \Session::getInstance()->set('filter', $filter);
+                },
+                function($intNode) {
+                    $arrNodes = array_merge(array($intNode), \Database::getInstance()->getChildRecords($intNode, Group::getTable()));
+                    $GLOBALS['TL_DCA'][Product::getTable()]['list']['sorting']['filter'][] = array('gid IN (' . implode(',', $arrNodes) . ')', null);
+                }
+            );
 
-        $GLOBALS['TL_DCA']['tl_iso_product']['list']['sorting']['breadcrumb'] = $strBreadcrumb;
+            $strBreadcrumb .= static::getPagesBreadcrumb();
+
+            $GLOBALS['TL_DCA']['tl_iso_product']['list']['sorting']['breadcrumb'] = $strBreadcrumb;
+        }
     }
 
     /**

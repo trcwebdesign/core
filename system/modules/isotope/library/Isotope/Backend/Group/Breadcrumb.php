@@ -20,94 +20,99 @@ class Breadcrumb extends \Backend
 
     /**
      * Generate groups breadcrumb and return it as HTML string
-     * @param integer
-     * @param integer
-     * @return string
+     * @param   string
+     * @return  string
      */
-    public static function generate($intId, $intProductId = null)
+    public static function generate($getNode=null, $setNode=null, $filterNode=null)
     {
-        $arrGroups  = array();
-        $objSession = \Session::getInstance();
+        $getNode = $getNode ?: function() {
+            return \Session::getInstance()->get('tl_iso_group_node');
+        };
 
-        // Set a new gid
-        if (isset($_GET['gid'])) {
-            $objSession->set('iso_products_gid', \Input::get('gid'));
-            \Controller::redirect(preg_replace('/&gid=[^&]*/', '', \Environment::get('request')));
-        }
+        $setNode = $setNode ?: function($intNode) {
+            \Session::getInstance()->set('tl_iso_group_node', $intNode);
+        };
 
-        // Return if there is no trail
-        if (!$objSession->get('iso_products_gid') && !$intProductId) {
-            return '';
-        }
+        $filterNode = $filterNode ?: function($intNode) {
+            $GLOBALS['TL_DCA']['tl_iso_group']['list']['sorting']['root'] = array($intNode);
+        };
 
-        $objUser     = \BackendUser::getInstance();
-        $objDatabase = \Database::getInstance();
 
-        // Include the product in variants view
-        if ($intProductId) {
-            $objProduct = $objDatabase->prepare("SELECT gid, name FROM tl_iso_product WHERE id=?")
-                ->limit(1)
-                ->execute($intProductId);
+		// Set a new node
+		if (isset($_GET['node'])) {
+			$setNode(\Input::get('node'));
+			\Controller::redirect(preg_replace('/&node=[^&]*/', '', \Environment::get('request')));
+		}
 
-            if ($objProduct->numRows) {
-                $arrGroups[] = array('id' => $intProductId, 'name' => $objProduct->name);
+		$intNode = $getNode();
 
-                // Override the group ID
-                $intId = $objProduct->gid;
-            }
-        }
+		if ($intNode < 1) {
+			return '';
+		}
 
-        $intPid = $intId;
+		$arrIds   = array();
+		$arrLinks = array();
+		$objUser  = \BackendUser::getInstance();
 
-        // Generate groups
-        do {
-            $objGroup = Group::findByPk($intPid);
+		// Generate breadcrumb trail
+		if ($intNode) {
 
-            if (null !== $objGroup) {
-                $arrGroups[] = array('id' => $objGroup->id, 'name' => $objGroup->name);
+			$intId = $intNode;
+			$objDatabase = \Database::getInstance();
 
-                if ($objGroup->pid) {
-                    // Do not show the mounted groups
-                    if (!$objUser->isAdmin && $objUser->hasAccess($objGroup->id, 'iso_groups')) {
-                        break;
-                    }
+			do {
+				$objGroup = $objDatabase->prepare("SELECT * FROM tl_iso_group WHERE id=?")
+									    ->limit(1)
+									    ->execute($intId);
 
-                    $intPid = $objGroup->pid;
-                }
-            }
-        } while ($objGroup->pid);
+				if ($objGroup->numRows < 1) {
+					// Currently selected group does not exits
+					if ($intId == $intNode) {
+						$setNode(0);
+						return '';
+					}
 
-        $arrLinks = array();
-        $strUrl   = \Environment::get('request');
+					break;
+				}
 
-        // Remove the product ID from URL
-        if ($intProductId) {
-            $strUrl = preg_replace('/&id=[^&]*/', '', $strUrl);
-        }
+				$arrIds[] = $intId;
 
-        // Generate breadcrumb trail
-        foreach ($arrGroups as $arrGroup) {
-            if (!$arrGroup['id']) {
-                continue;
-            }
+				// No link for the active group
+				if ($objGroup->id == $intNode) {
+					$arrLinks[] = '<img src="system/modules/isotope/assets/images/folder-network.png" width="16" height="16" alt="" style="padding:1px 0">' . ' ' . $objGroup->name;
+				} else {
+					$arrLinks[] = '<img src="system/modules/isotope/assets/images/folder-network.png" width="16" height="16" alt="" style="padding:1px 0"> <a href="' . \Controller::addToUrl('node='.$objGroup->id) . '" title="'.specialchars($GLOBALS['TL_LANG']['MSC']['selectNode']).'">' . $objGroup->name . '</a>';
+				}
 
-            $buffer = '';
+				// Do not show the mounted groups
+				if (!$objUser->isAdmin && $objUser->hasAccess($objGroup->id, 'iso_groups')) {
+					break;
+				}
 
-            // No link for the active group
-            if ((!$intProductId && $intId == $arrGroup['id']) || ($intProductId && $intProductId == $arrGroup['id'])) {
-                $buffer .= '<img src="system/modules/isotope/assets/images/folder-network.png" width="16" height="16" alt="" style="margin-right:6px;">' . $arrGroup['name'];
-            } else {
-                $buffer .= '<img src="system/modules/isotope/assets/images/folder-network.png" width="16" height="16" alt="" style="margin-right:6px;"><a href="' . ampersand($strUrl) . '&amp;gid=' . $arrGroup['id'] . '" title="' . specialchars($GLOBALS['TL_LANG']['MSC']['selectGroup']) . '">' . $arrGroup['name'] . '</a>';
-            }
+				$intId = $objGroup->pid;
 
-            $arrLinks[] = $buffer;
-        }
+			} while ($intId > 0);
+		}
 
-        $arrLinks[] = sprintf('<a href="%s" title="' . specialchars($GLOBALS['TL_LANG']['MSC']['allGroups']) . '"><img src="system/modules/isotope/assets/images/folders.png" width="16" height="16" alt="" style="margin-right:6px;"> %s</a>', ampersand($strUrl) . '&amp;gid=0', $GLOBALS['TL_LANG']['MSC']['filterAll']);
+		// Check whether the node is mounted
+		if (!$objUser->isAdmin && !$objUser->hasAccess($arrIds, 'iso_groups')) {
+			$setNode(0);
 
-        return '
+			\System::log('Group ID '.$intNode.' was not mounted', __METHOD__, TL_ERROR);
+			\Controller::redirect('contao/main.php?act=error');
+		}
+
+		// Limit tree
+		$filterNode($intNode);
+
+		// Add root link
+		$arrLinks[] = '<img src="system/modules/isotope/assets/images/folders.png" width="16" height="16" alt="" style="padding:1px 0"> <a href="' . \Controller::addToUrl('node=0') . '" title="'.specialchars($GLOBALS['TL_LANG']['MSC']['selectAllNodes']).'">' . $GLOBALS['TL_LANG']['MSC']['filterAll'] . '</a>';
+		$arrLinks = array_reverse($arrLinks);
+
+		return '
+
 <ul id="tl_breadcrumb">
-  <li>' . implode(' &gt; </li><li>', array_reverse($arrLinks)) . '</li>
+  <li>' . implode(' &gt; </li><li>', $arrLinks) . '</li>
 </ul>';
     }
 }

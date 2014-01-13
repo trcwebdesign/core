@@ -195,8 +195,8 @@ class ProductGroupSelector extends \Widget
             }
         } else {
             // Breadcrumb menu
-            if ($this->Session->get('iso_products_gid')) {
-                $tree .= $this->renderGrouptree($this->Session->get('iso_products_gid'), -20);
+            if ($this->Session->get('tl_iso_group_node')) {
+                $tree .= $this->renderGrouptree($this->Session->get('tl_iso_group_node'), -20);
             } // Predefined node set (see #3563)
             elseif (is_array($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['rootNodes'])) {
                 foreach ($this->eliminateNestedPages($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['rootNodes'], $this->strTable) as $node) {

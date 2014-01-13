@@ -231,6 +231,9 @@ class Button extends \Backend
     {
         if (\Input::get('act') == 'select' && !\Input::get('id')) {
 
+            $filter = \Session::getInstance()->get('filter');
+            $varValue = $filter['tl_iso_product']['iso_group'];
+
             unset($arrButtons['copy']);
             unset($arrButtons['cut']);
 
@@ -245,7 +248,7 @@ window.addEvent('domready', function() {
             Isotope.openModalGroupSelector({
                 'width':    765,
                 'title':    '" . specialchars($GLOBALS['TL_LANG']['tl_iso_product']['product_groups'][0]) . "',
-                'url':      'system/modules/isotope/group.php?do=" . \Input::get('do') . "&amp;table=" . \Isotope\Model\Group::getTable() . "&amp;field=gid&amp;value=" . \Session::getInstance()->get('iso_products_gid') . "',
+                'url':      'system/modules/isotope/group.php?do=" . \Input::get('do') . "&amp;table=" . \Isotope\Model\Group::getTable() . "&amp;field=gid&amp;value=" . $varValue . "',
                 'action':   'moveProducts',
                 'trigger':  $(this)
             });

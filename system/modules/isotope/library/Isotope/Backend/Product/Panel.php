@@ -30,6 +30,7 @@ class Panel extends \Backend
 
         $session   = \Session::getInstance()->getData();
         $intPage   = $session['filter']['tl_iso_product']['iso_page'];
+        $intGroup  = $session['filter']['tl_iso_product']['iso_group'];
         $blnGroups = true;
 
         // Check permission
@@ -48,7 +49,7 @@ class Panel extends \Backend
 
         return '
 <div class="tl_filter iso_filter tl_subpanel">
-' . ($blnGroups ? '<input type="button" id="groupFilter" class="tl_submit' . (\Session::getInstance()->get('iso_products_gid') ? ' active' : '') . '" onclick="Backend.getScrollOffset();Isotope.openModalGroupSelector({\'width\':765,\'title\':\'' . specialchars($GLOBALS['TL_LANG']['tl_iso_product']['product_groups'][0]) . '\',\'url\':\'system/modules/isotope/group.php?do=' . \Input::get('do') . '&amp;table=' . \Isotope\Model\Group::getTable() . '&amp;field=gid&amp;value=' . \Session::getInstance()->get('iso_products_gid') . '\',\'action\':\'filterGroups\'});return false" value="' . specialchars($GLOBALS['TL_LANG']['MSC']['filterByGroups']) . '">' : '') . '
+' . ($blnGroups ? '<input type="button" id="groupFilter" class="tl_submit' . ($intGroup ? ' active' : '') . '" onclick="Backend.getScrollOffset();Isotope.openModalGroupSelector({\'width\':765,\'title\':\'' . specialchars($GLOBALS['TL_LANG']['tl_iso_product']['product_groups'][0]) . '\',\'url\':\'system/modules/isotope/group.php?do=' . \Input::get('do') . '&amp;table=' . \Isotope\Model\Group::getTable() . '&amp;field=gid&amp;value=' . $intGroup . '\',\'action\':\'filterGroups\'});return false" value="' . specialchars($GLOBALS['TL_LANG']['MSC']['filterByGroups']) . '">' : '') . '
 <input type="button" id="pageFilter" class="tl_submit' . ($intPage > 0 ? ' active' : '') . '" onclick="Backend.getScrollOffset();Isotope.openModalPageSelector({\'width\':765,\'title\':\'' . specialchars($GLOBALS['TL_LANG']['MOD']['page'][0]) . '\',\'url\':\'contao/page.php?do=' . \Input::get('do') . '&amp;table=tl_iso_product_category&amp;field=page_id&amp;value=' . $intPage . '\',\'action\':\'filterPages\'});return false" value="' . specialchars($GLOBALS['TL_LANG']['MSC']['filterByPages']) . '">
 </div>';
     }
