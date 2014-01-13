@@ -39,59 +39,6 @@ class DC_ProductData extends \DC_Table
      */
     protected $arrLanguageLabels;
 
-    /**
-     * ID of an active group
-     * @integer
-     */
-    protected $intGroupId;
-
-
-    /**
-     * Initialize the object
-     * @param string
-     */
-    public function __construct($strTable)
-    {
-        $this->import('Session');
-
-        $this->intGroupId = (int)\Session::getInstance()->get('iso_products_gid') ? : (\BackendUser::getInstance()->isAdmin ? 0 : intval(\BackendUser::getInstance()->iso_groups[0]));
-
-        // Check if the group exists
-        if ($this->intGroupId > 0) {
-            $objGroup = \Isotope\Model\Group::findByPk($this->intGroupId);
-
-            if (null === $objGroup) {
-                if (\BackendUser::getInstance()->isAdmin || !is_array(\BackendUser::getInstance()->iso_groups)) {
-                    $this->intGroupId = 0;
-                }
-            } elseif (!\BackendUser::getInstance()->isAdmin) {
-                $this->intGroupId = (int) \Database::getInstance()->prepare(
-                    "SELECT id FROM " . \Isotope\Model\Group::getTable() . " WHERE id IN ('" . implode("','", \BackendUser::getInstance()->iso_groups) . "') ORDER BY " . \Database::getInstance()->findInSet('id', \BackendUser::getInstance()->iso_groups)
-                )->limit(1)->execute()->id;
-            }
-        }
-
-        // Redirect if the product was not found
-        if (isset($_GET['id'])) {
-            $objProduct = \Database::getInstance()->prepare("SELECT id FROM " . $strTable . " WHERE id=?")
-                ->limit(1)
-                ->execute(\Input::get('id', true));
-
-            if (!$objProduct->numRows) {
-                \Controller::redirect(preg_replace('/(&amp;)?id=[^&]*/i', '', \Environment::get('request')));
-            }
-        }
-
-        $arrClipboard = $this->Session->get('CLIPBOARD');
-
-        // Cut all records
-        if ($arrClipboard[$strTable]['mode'] == 'cutAll' && \Input::get('act') != 'cutAll') {
-            \Controller::redirect(\Backend::addToUrl('&act=cutAll'));
-        }
-
-        parent::__construct($strTable);
-    }
-
 
     /**
      * List all records of a particular table
@@ -134,9 +81,6 @@ class DC_ProductData extends \DC_Table
         // Do not show the language records
         $this->procedure[] = "language=''";
 
-        // Display products filtered by group
-        $this->procedure[] = "gid IN(" . implode(',', array_map('intval', \Database::getInstance()->getChildRecords(array($this->intGroupId), \Isotope\Model\Group::getTable(), false, array($this->intGroupId)))) . ")";
-
         // Custom filter
         if (is_array($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['filter']) && !empty($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['filter'])) {
             foreach ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['filter'] as $filter) {
@@ -178,57 +122,6 @@ class DC_ProductData extends \DC_Table
         $this->Session->setData($session);
 
         return $return;
-    }
-
-
-    /**
-     * Assign a new position to an existing record
-     * @param boolean
-     */
-    public function cut($blnDoNotRedirect = false)
-    {
-        if ($this->intId > 0) {
-            $time = time();
-
-            // Empty clipboard
-            $arrClipboard = $this->Session->get('CLIPBOARD');
-            $arrClipboard[$this->strTable] = array();
-            $this->Session->set('CLIPBOARD', $arrClipboard);
-
-            $objRecord = $this->Database->prepare("SELECT pid FROM {$this->strTable} WHERE id=?")
-                ->limit(1)
-                ->execute($this->intId);
-
-            // Update only the variant
-            if ($objRecord->pid > 0) {
-                $this->Database->prepare("UPDATE {$this->strTable} SET tstamp=?, gid=?, pid=? WHERE id=?")
-                    ->execute($time, $this->intGroupId, \Input::get('pid'), $this->intId);
-            } // Update the main product and its variants
-            else {
-                $this->Database->prepare("UPDATE {$this->strTable} SET tstamp=?, gid=? WHERE id=? OR pid=?")
-                    ->execute($time, $this->intGroupId, $this->intId, $this->intId);
-            }
-
-            // Call the oncut_callback
-            if (is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['oncut_callback'])) {
-                foreach ($GLOBALS['TL_DCA'][$this->strTable]['config']['oncut_callback'] as $callback) {
-                    if (is_array($callback)) {
-                        $this->import($callback[0]);
-                        $this->$callback[0]->$callback[1]($this);
-                    } elseif (is_callable($callback)) {
-                        call_user_func($callback, $this);
-                    }
-                }
-            }
-
-            if (!$blnDoNotRedirect) {
-                \Controller::redirect(\System::getReferer());
-            }
-
-            return;
-        }
-
-        parent::cut($blnDoNotRedirect);
     }
 
 
@@ -321,28 +214,6 @@ class DC_ProductData extends \DC_Table
                 }
             }
         }
-    }
-
-
-    /**
-     * Move all selected records
-     */
-    public function copyAll()
-    {
-        $arrClipboard = $this->Session->get('CLIPBOARD');
-
-        if (isset($arrClipboard[$this->strTable]) && is_array($arrClipboard[$this->strTable]['id'])) {
-            $arrIds = array();
-
-            foreach ($arrClipboard[$this->strTable]['id'] as $id) {
-                $this->intId = $id;
-                $arrIds[] = $this->copy(true);
-            }
-
-            $this->Database->query("UPDATE {$this->strTable} SET gid=" . $this->intGroupId . " WHERE id IN (" . implode(',', $arrIds) . ")");
-        }
-
-        \Controller::redirect(\System::getReferer());
     }
 
 
