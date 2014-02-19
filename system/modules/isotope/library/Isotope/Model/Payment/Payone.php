@@ -65,7 +65,13 @@ class Payone extends Postsale implements IsotopePayment
      */
     public function getPostsaleOrder()
     {
-        return Order::findByPk(\Input::post('reference'));
+        $varRef = \Input::post('reference');
+
+        if ($this->orderReferencePrefix) {
+            $varRef = str_replace($this->orderReferencePrefix, '', $varRef);
+        }
+
+        return Order::findByPk((int) $varRef);
     }
 
     /**
@@ -86,7 +92,7 @@ class Payone extends Postsale implements IsotopePayment
             'request'           => ($this->trans_type=='auth' ? 'preauthorization' : 'authorization'),
             'encoding'          => 'UTF-8',
             'clearingtype'      => $this->payone_clearingtype,
-            'reference'         => $objOrder->id,
+            'reference'         => ($this->orderReferencePrefix) ?: '' . $objOrder->id,
             'display_name'      => 'no',
             'display_address'   => 'no',
             'successurl'        => \Environment::get('base') . $objModule->generateUrlForStep('complete', $objOrder),

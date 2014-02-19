@@ -66,6 +66,7 @@ $GLOBALS['TL_LANG']['tl_iso_payment']['worldpay_callbackPW']                    
 $GLOBALS['TL_LANG']['tl_iso_payment']['worldpay_signatureFields']               = array('SignatureFields', 'Enter the same SignatureField value as in your WorldPay configuration.');
 $GLOBALS['TL_LANG']['tl_iso_payment']['worldpay_md5secret']                     = array('MD5 Secret', 'Enter the same MD5 secret value as in your WorldPay configuration.');
 $GLOBALS['TL_LANG']['tl_iso_payment']['worldpay_description']                   = array('Description', 'Enter a description for your store. It will be shown to the customer on the worldpay checkout process.');
+$GLOBALS['TL_LANG']['tl_iso_payment']['orderReferencePrefix']                   = array('Order prefix', 'Some payment providers require a custom prefix to the order reference being generated. They are used to create unique references on the part of the payment provider.');
 $GLOBALS['TL_LANG']['tl_iso_payment']['groups']                                 = array('Member groups', 'Restrict this payment method to certain member groups.');
 $GLOBALS['TL_LANG']['tl_iso_payment']['protected']                              = array('Protect payment method', 'Show the payment method to certain member groups only.');
 $GLOBALS['TL_LANG']['tl_iso_payment']['guests']                                 = array('Show to guests only', 'Hide the payment method if a member is logged in.');
