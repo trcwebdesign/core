@@ -36,7 +36,11 @@ class AttributeWizard extends \Backend
         $blnVariants = ($objWidget->name != 'attributes');
 
         if (!empty($arrValues) && is_array($arrValues)) {
-            $arrFixed = $blnVariants ? Attribute::getVariantFixedFields() : Attribute::getFixedFields();
+            if ($blnVariants) {
+                $arrFixed = Attribute::getVariantFixedFields($objWidget->dataContainer->activeRecord->class);
+            } else {
+                $arrFixed = Attribute::getFixedFields($objWidget->dataContainer->activeRecord->class);
+            }
 
             foreach ($arrValues as $i => $attribute) {
 
@@ -162,8 +166,8 @@ class AttributeWizard extends \Backend
     /**
      * Generate list of fields and add missing ones from DCA
      *
-     * @param mixed  $varValue The widget value
-     * @param object $dc       The DataContainer object
+     * @param mixed          $varValue The widget value
+     * @param \DataContainer $dc       The DataContainer object
      *
      * @return array
      */
@@ -201,8 +205,14 @@ class AttributeWizard extends \Backend
                 continue;
             }
 
+            $fixed = $arrField['attributes'][($blnVariants ? 'variant_' : '') . 'fixed'];
+
+            if (is_array($fixed) && !in_array($dc->activeRecord->type, $fixed, true)) {
+                $fixed = false;
+            }
+
             $arrFields[$strName] = array(
-                'enabled' => ($arrField['attributes'][($blnVariants ? 'variant_' : '') . 'fixed'] ? '1' : ''),
+                'enabled' => $fixed ? '1' : '',
                 'name'    => $strName,
                 'legend'  => $arrField['attributes']['legend'],
             );
@@ -232,11 +242,14 @@ class AttributeWizard extends \Backend
         }
 
         foreach ($arrFields as $k => $arrField) {
-            if ($arrDCA[$arrField['name']]['attributes'][($blnVariants ? 'variant_' : '') . 'fixed']) {
+            $fixed   = $arrField['attributes'][($blnVariants ? 'variant_' : '') . 'fixed'];
+            $isArray = is_array($fixed);
+
+            if ((!$isArray && $fixed) || ($isArray && in_array($dc->activeRecord->type, $fixed, true))) {
                 $arrFields[$k]['enabled'] = '1';
             }
 
-            if (!in_array($arrField['legend'], $arrLegends)) {
+            if (!in_array($arrField['legend'], $arrLegends, true)) {
                 $arrLegends[] = $arrField['legend'];
             }
         }
