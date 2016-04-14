@@ -63,12 +63,7 @@ class PostSale extends \Frontend
     {
         parent::__construct();
 
-        // Contao Hooks are not save to be run on the postsale script (e.g. parseFrontendTemplate)
-        unset($GLOBALS['TL_HOOKS']);
-
-        // Need to load our own Hooks (e.g. loadDataContainer)
-        /** @noinspection PhpIncludeInspection */
-        include(TL_ROOT . '/system/modules/isotope/config/hooks.php');
+        //$this->prepareHooks();
 
         // Default parameters
         $this->setModule((string) (\Input::post('mod') ?: \Input::get('mod')));
@@ -229,6 +224,25 @@ class PostSale extends \Frontend
             ),
             'isotope_postsale.log'
         );
+    }
+
+    private function prepareHooks()
+    {
+        // Most Contao hooks are not save to be run on the postsale script (e.g. parseFrontendTemplate)
+        foreach ($GLOBALS['TL_HOOKS'] as $key => $hooks) {
+            switch ($key) {
+                case 'replaceInsertTags':
+                case 'loadDataContainer':
+                    continue(2);
+
+                default:
+                    unset($GLOBALS['TL_HOOKS'][$key]);
+                    break;
+            }
+        }
+
+        // Need to load our own Hooks (e.g. loadDataContainer)
+        include(TL_ROOT . '/system/modules/isotope/config/hooks.php');
     }
 }
 
